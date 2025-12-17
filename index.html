@@ -1,38 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DIPLOMACY.OS // PREVIEW</title>
+    <meta charset="UTF-8">
+    <title>ANSHUMAN FEDERAL RESEARCH // CLASSIFIED</title>
     <style>
         body {
-            background-color: #0d0200;
-            color: #ff5f00; /* The orange glow */
+            background-color: #050505;
+            background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+            background-size: 25px 25px;
+            color: #ff4500;
             font-family: 'Courier New', Courier, monospace;
-            padding: 40px;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Scanline Overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .window {
+            position: absolute;
+            border: 1px solid #ff4500;
+            background: rgba(0, 0, 0, 0.9);
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.2);
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .header {
+            border-bottom: 1px solid #ff4500;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            font-weight: bold;
             text-transform: uppercase;
         }
-        .terminal-text {
-            border-right: 2px solid #ff5f00;
-            white-space: pre-wrap;
-            overflow: hidden;
-            animation: blink 0.7s infinite;
-        }
-        @keyframes blink { 50% { border-color: transparent; } }
+
+        /* Windows positions */
+        #main-system { top: 5%; left: 5%; width: 300px; }
+        #whitelist { top: 5%; right: 5%; width: 280px; color: #00ff41; border-color: #00ff41; }
+        #tracker { bottom: 10%; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; border-color: #ff0000; color: #ff0000; }
+
+        .success { color: white; background: #00ff41; padding: 0 5px; }
+        .tracking-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="output"></div>
+
+    <div class="window" id="main-system">
+        <div class="header">SYSTEM://AFR_CORE</div>
+        ORGANIZATION: ANSHUMAN FEDERAL RESEARCH<br>
+        SECURE NODE: UAE_01<br>
+        STATUS: ENCRYPTED<br>
+        --------------------------<br>
+        > INITIALIZING GHOST_PROTOCOL...
+    </div>
+
+    <div class="window" id="whitelist">
+        <div class="header">WHITELISTED_PERSONNEL</div>
+        - SAPTARSHEE SARKAR<br>
+        - SAQIB ALI<br>
+        - SARTHAK VIRALBHAI SHAH<br>
+        - SAYYID ABDULLAH<br>
+        - SHINE SHYJU<br>
+        - SHIVAM PRATEEK<br>
+        - ZAEEM
+    </div>
+
+    <div class="window" id="tracker">
+        <div class="header">LIVE_IP_TRACKER_V4.2</div>
+        <div id="status-line">SCANNING NETWORK...</div>
+        <div class="tracking-text" id="target-output">INITIATING TRACE...</div>
+        <div id="ip-output">0.0.0.0</div>
+    </div>
 
     <script>
-        const text = "DIPLOMACY.OS // BOOTING...\nREGION: UAE_NODE\nSTATUS: ONLINE\n\n> SEEK DIPLOMACY\n> THE FUTURE IS BUFFERING...";
-        let i = 0;
-        function typeWriter() {
-            if (i < text.length) {
-                document.getElementById("output").innerHTML += text.charAt(i);
-                i++;
-                setTimeout(typeWriter, 50);
-            }
+        const classmates = [
+            "SAPTARSHEE SARKAR", "SAQIB ALI", "SARTHAK VIRALBHAI SHAH", 
+            "SAYYID ABDULLAH", "SHINE SHYJU", "SHIVAM PRATEEK", "ZAEEM"
+        ];
+
+        function startTracking() {
+            const statusLine = document.getElementById('status-line');
+            const targetOutput = document.getElementById('target-output');
+            const ipOutput = document.getElementById('ip-output');
+
+            setInterval(() => {
+                // Generate fake IP
+                const fakeIp = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 255)}`;
+                const randomName = classmates[Math.floor(Math.random() * classmates.length)];
+
+                statusLine.innerHTML = "SIGNAL INTERCEPTED...";
+                ipOutput.innerHTML = `TARGET_IP: ${fakeIp}`;
+                targetOutput.innerHTML = `LOCATING: ${randomName}...`;
+
+                // Randomly show "Success"
+                if(Math.random() > 0.7) {
+                    targetOutput.innerHTML = `<span class="success">TRACKING SUCCESSFUL: ${randomName}</span>`;
+                }
+            }, 2000);
         }
-        typeWriter();
+
+        window.onload = startTracking;
     </script>
 </body>
 </html>
