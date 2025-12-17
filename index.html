@@ -2,33 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANSHUMAN FEDERAL RESEARCH // SUPREME_ADMIN</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             background-color: #050505;
-            /* World Map Silhouette Background */
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/41/World_map_blank_without_borders.svg');
             background-repeat: no-repeat;
             background-position: center;
-            background-size: 80%;
+            background-size: 85%;
             background-attachment: fixed;
-            /* Gray tint filter for the map */
-            filter: grayscale(100%) brightness(15%) contrast(150%);
             color: #ff4500;
             font-family: 'Courier New', Courier, monospace;
             margin: 0;
             overflow: hidden;
             height: 100vh;
+            width: 100vw;
         }
 
+        /* Scanline Overlay */
         .ui-wrapper {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            filter: none; /* Keeps the UI sharp while background is dark */
-            z-index: 1;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 10;
         }
 
-        /* CRT Scanline Filter */
         .ui-wrapper::before {
             content: " ";
             display: block;
@@ -40,7 +40,6 @@
             pointer-events: none;
         }
 
-        /* Login Screen */
         #login-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -51,7 +50,6 @@
             justify-content: center;
             align-items: center;
             color: #ff0000;
-            text-align: center;
         }
 
         input {
@@ -67,7 +65,6 @@
             font-size: 18px;
         }
 
-        /* Boot Screen */
         #boot-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -75,237 +72,147 @@
             color: #00ff41;
             z-index: 1000;
             padding: 50px;
-            font-size: 14px;
             display: none;
+            font-size: 16px;
         }
 
         .window {
             position: absolute;
             border: 1px solid #ff4500;
-            background: rgba(0, 0, 0, 0.92);
-            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+            background: rgba(0, 0, 0, 0.95);
             padding: 10px;
-            font-size: 10px;
-            line-height: 1.3;
+            font-size: 11px;
             display: none;
+            z-index: 50;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
         }
 
         .header {
             border-bottom: 1px solid #ff4500;
             margin-bottom: 8px;
-            padding-bottom: 4px;
             font-weight: bold;
-            text-transform: uppercase;
+            color: #ff4500;
         }
 
-        /* Surveillance Grid */
         #surveillance-grid {
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 580px;
-            height: 380px;
+            width: 580px; height: 380px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-gap: 5px;
-            border-color: #00ccff;
-            color: #00ccff;
+            border-color: #00ccff; color: #00ccff;
         }
 
-        .cam-feed {
-            background: #111;
-            border: 1px solid #333;
-            height: 100px;
-            position: relative;
-            overflow: hidden;
-        }
+        .cam-feed { background: #111; height: 110px; border: 1px solid #333; position: relative; overflow: hidden; }
+        .cam-feed img { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; filter: grayscale(1); }
 
-        .cam-feed img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.5;
-            filter: grayscale(1) brightness(0.7);
-            transition: opacity 0.5s ease-in-out;
-        }
+        #main-system { top: 2%; left: 2%; width: 230px; }
+        #whitelist { top: 2%; right: 2%; width: 260px; color: #00ff41; border-color: #00ff41; height: 90vh; overflow-y: auto; }
+        #admin-monitor { bottom: 2%; right: 2%; width: 260px; color: #ffaa00; border-color: #ffaa00; }
+        #tracker { bottom: 2%; left: 2%; width: 280px; border-color: #ff0000; color: #ff0000; }
 
-        .cam-label {
-            position: absolute;
-            top: 2px; left: 2px;
-            font-size: 8px;
-            background: rgba(0,0,0,0.8);
-            z-index: 2;
-            padding: 0 3px;
-        }
-
-        /* Window Layout Positions */
-        #main-system { top: 5%; left: 2%; width: 250px; }
-        #whitelist { top: 5%; right: 2%; width: 280px; color: #00ff41; border-color: #00ff41; height: 85vh; overflow-y: hidden; }
-        #tracker { bottom: 5%; left: 2%; width: 300px; border-color: #ff0000; color: #ff0000; }
-        #admin-monitor { bottom: 5%; right: 2%; width: 280px; color: #ffaa00; border-color: #ffaa00; }
-
-        .fbi-alert {
-            position: absolute;
-            background: red;
-            color: white;
-            padding: 5px 15px;
-            font-weight: bold;
-            border: 2px solid white;
-            z-index: 500;
-            display: none;
-            animation: flash 0.5s infinite;
-        }
-
-        @keyframes flash { 50% { opacity: 0; } }
-        .success { color: white; background: #00ff41; padding: 0 5px; }
+        .fbi-alert { position: absolute; background: red; color: white; padding: 10px; display: none; z-index: 500; border: 2px solid white; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <h1>[ FEDERAL AUTHORITY ONLY ]</h1>
-        <p>IDENTITY VERIFICATION REQUIRED</p>
-        <input type="password" id="passInput" placeholder="ENTER ACCESS KEY" autofocus>
+        <h1>[ SECURITY CLEARANCE REQUIRED ]</h1>
+        <p>ENTER ADMIN ACCESS KEY</p>
+        <input type="password" id="passInput" placeholder="PASSWORD" autofocus>
     </div>
 
-    <div id="boot-screen">
-        <div id="boot-text"></div>
-    </div>
+    <div id="boot-screen"><div id="boot-text"></div></div>
 
     <div class="ui-wrapper">
-        <div class="fbi-alert" id="fbi-pop">CAUTION: DATA INTERCEPTION ACTIVE</div>
+        <div class="fbi-alert" id="fbi-pop">ALERT: DATA INTERCEPTION ACTIVE</div>
 
         <div class="window" id="surveillance-grid">
-            <div class="header" style="grid-column: span 3;">ACTIVE_SURVEILLANCE_FEED // AUTO_CYCLING</div>
-            <div class="cam-feed"><div class="cam-label">CAM_01</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_02</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_03</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_04</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_05</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_06</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_07</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_08</div><img class="feed-img" src=""></div>
-            <div class="cam-feed"><div class="cam-label">CAM_09</div><img class="feed-img" src=""></div>
+            <div class="header" style="grid-column: span 3; border-color: #00ccff;">ACTIVE_FEEDS // GLOBAL_NODES</div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1545147986-a9d6f2103756?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=200"></div>
+            <div class="cam-feed"><img class="feed-img" src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200"></div>
         </div>
 
         <div class="window" id="main-system">
             <div class="header">SYSTEM://AFR_CORE</div>
-            STATUS: <span class="success">ONLINE</span><br>
-            THREAT_LEVEL: <span style="color:red">RED</span><br>
-            --------------------------<br>
-            > DIRECTIVE: MONITOR_ALL
+            STATUS: <span style="background:#00ff41;color:white;padding:0 3px;">ONLINE</span><br>
+            ENCRYPTION: AES_256<br>
+            NODE: UAE_CENTRAL
         </div>
 
         <div class="window" id="whitelist">
-            <div class="header">PERSONNEL_DATABASE</div>
-            - MOKSH PRASHANTKUMAR SUTHAR<br>- MOOSA KHAN<br>- NAVANEETH PAYYADAKKATH<br>
-            - PAYAS KULHARI<br>- RAYAN NIBU<br>- SAI TEJ SIDDHARTH AKULA<br>
-            - SANJIT SURESH KUMAR<br>- ABHIRAM ERAYANKOTTU PANAYANTHATTA<br>
-            - ADHISH JACOB ANIL<br>- ADIL ASLAM ALI CHILWAN<br>
-            - ADITYA KARAN HARCHAND<br>- AROMAL AYYAPPAN SAMBAJI<br>
-            - ARYAN MANDE<br>- HARIHARA GOMATHINATHAN<br>
-            - ISHAN S. R. K. BEHERA<br>- ISIT S. R. K. BEHERA<br>
-            - JONATHAN RAJ<br>- MOHAMMED IYAD ISMAIL KHAN<br>
-            - MOHAMMED RAYHAN<br>- MOHAMMED RAYYAN KHAN<br>
-            - SAPTARSHEE SARKAR<br>- SAQIB ALI<br>- SARTHAK V. SHAH<br>
-            - SAYYID ABDULLAH<br>- SHINE SHYJU<br>- SHIVAM PRATEEK<br>- ZAEEM
+            <div class="header">WHITELISTED_PERSONNEL</div>
+            - ABHIRAM E. P.<br>- ADHISH JACOB ANIL<br>- ADIL ASLAM ALI C.<br>
+            - ADITYA KARAN H.<br>- AROMAL AYYAPPAN S.<br>- ARYAN MANDE<br>
+            - HARIHARA G.<br>- ISHAN S. R. K. B.<br>- ISIT S. R. K. B.<br>
+            - JONATHAN RAJ<br>- MOHAMMED IYAD I. K.<br>- MOHAMMED RAYHAN<br>
+            - MOHAMMED RAYYAN K.<br>- MOKSH P. SUTHAR<br>- MOOSA KHAN<br>
+            - NAVANEETH P.<br>- PAYAS KULHARI<br>- RAYAN NIBU<br>
+            - SAI TEJ SIDDHARTH<br>- SANJIT SURESH K.
         </div>
 
         <div class="window" id="admin-monitor">
             <div class="header">ADMIN_MONITOR</div>
             NAME: <strong>Anshuxxx xxxxxxxx</strong><br>
             ROLE: <strong>SUPREME_ADMIN</strong><br>
-            AUTH: VERIFIED [LVL_10]<br>
-            --------------------------<br>
-            [OK] KEYLOGGER: ACTIVE<br>
-            [OK] PACKET_SNIFFER: ON
+            AUTH: VERIFIED [LVL_10]
         </div>
 
         <div class="window" id="tracker">
-            <div class="header">TRACE_UTILITY</div>
-            <div id="status-line">SCANNING NODES...</div>
-            <div id="ip-output">IP: 0.0.0.0</div>
+            <div class="header">LIVE_IP_TRACE</div>
+            <div id="ip-output">IP: 192.168.1.1</div>
         </div>
     </div>
 
     <script>
-        const correctPass = "A$N#H";
-        const camImages = [
-            "https://images.unsplash.com/photo-1545147986-a9d6f2103756?w=300",
-            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300",
-            "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=300",
-            "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=300",
-            "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300",
-            "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300",
-            "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300",
-            "https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=300",
-            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300"
+        const key = "A$N#H";
+        const camList = [
+            "https://images.unsplash.com/photo-1545147986-a9d6f2103756?w=200",
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200",
+            "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=200",
+            "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=200",
+            "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200"
         ];
 
-        document.getElementById('passInput').addEventListener('keypress', function (e) {
+        document.getElementById('passInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                if (this.value === correctPass) {
+                if (this.value === key) {
                     document.getElementById('login-screen').style.display = 'none';
                     document.getElementById('boot-screen').style.display = 'block';
-                    typeBoot();
-                } else {
-                    alert("ACCESS DENIED: TRACING UNAUTHORIZED USER...");
-                }
+                    let lines = ["INITIALIZING...", "SATELLITE LINK ESTABLISHED...", "ADMIN: Anshuxxx xxxxxxxx CONFIRMED.", "ACCESS GRANTED."];
+                    let i = 0;
+                    let itv = setInterval(() => {
+                        document.getElementById('boot-text').innerHTML += lines[i++] + "<br>";
+                        if(i === lines.length) {
+                            clearInterval(itv);
+                            setTimeout(() => {
+                                document.getElementById('boot-screen').style.display = 'none';
+                                document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
+                                startCycles();
+                            }, 1000);
+                        }
+                    }, 600);
+                } else { alert("ACCESS DENIED."); this.value = ""; }
             }
         });
 
-        function typeBoot() {
-            const lines = ["INITIALIZING AFR_CORE...", "CONNECTING TO GLOBAL SURVEILLANCE...", "ADMIN: Anshuxxx xxxxxxxx CONFIRMED.", "ACCESS GRANTED."];
-            let i = 0;
-            const target = document.getElementById('boot-text');
-            const itv = setInterval(() => {
-                target.innerHTML += lines[i++] + "<br>";
-                if(i === lines.length) {
-                    clearInterval(itv);
-                    setTimeout(() => {
-                        document.getElementById('boot-screen').style.display = 'none';
-                        document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
-                        initSurveillance();
-                        startInterfaceLoops();
-                    }, 1000);
-                }
-            }, 500);
-        }
-
-        function initSurveillance() {
-            const imgs = document.querySelectorAll('.feed-img');
-            imgs.forEach((img, idx) => {
-                img.src = camImages[idx % camImages.length];
-            });
-
-            // Cycle random camera every 3 seconds
+        function startCycles() {
+            const feedImgs = document.querySelectorAll('.feed-img');
             setInterval(() => {
-                const randomCam = imgs[Math.floor(Math.random() * imgs.length)];
-                const randomImg = camImages[Math.floor(Math.random() * camImages.length)];
-                randomCam.style.opacity = 0;
-                setTimeout(() => {
-                    randomCam.src = randomImg;
-                    randomCam.style.opacity = 0.5;
-                }, 500);
+                let rImg = camList[Math.floor(Math.random() * camList.length)];
+                let rSlot = feedImgs[Math.floor(Math.random() * feedImgs.length)];
+                rSlot.style.opacity = 0;
+                setTimeout(() => { rSlot.src = rImg; rSlot.style.opacity = 0.6; }, 500);
+                document.getElementById('ip-output').innerText = "IP: " + Math.floor(Math.random()*255) + "." + Math.floor(Math.random()*255) + "." + Math.floor(Math.random()*100) + ".1";
             }, 3000);
-        }
-
-        function startInterfaceLoops() {
-            // Random FBI Popups
-            setInterval(() => {
-                if(Math.random() > 0.8) {
-                    const pop = document.getElementById('fbi-pop');
-                    pop.style.top = Math.random() * 80 + '%';
-                    pop.style.left = Math.random() * 80 + '%';
-                    pop.style.display = 'block';
-                    setTimeout(() => pop.style.display = 'none', 1000);
-                }
-            }, 4000);
-
-            // Fake IP Tracker Loop
-            setInterval(() => {
-                const ip = `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*100)}.${Math.floor(Math.random()*255)}`;
-                document.getElementById('ip-output').innerText = "IP: " + ip;
-            }, 2000);
         }
     </script>
 </body>
