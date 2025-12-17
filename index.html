@@ -3,248 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANSHUMAN FEDERAL RESEARCH // SUPREME_ADMIN</title>
+    <title>AFR.OS // CORE_SYSTEM</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root {
-            --orange: #ff4500;
-            --green: #00ff41;
             --bg: #000;
+            --orange: #ff8a3c;
+            --amber: #ffcc66;
+            --green: #00ff88;
+            --red: #ff3e3e;
         }
 
-        * { box-sizing: border-box; cursor: crosshair; }
-        
-        body {
-            background-color: var(--bg);
-            background-image: radial-gradient(circle, #1a0a00 1px, transparent 1px);
-            background-size: 30px 30px;
-            color: var(--orange);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            overflow: hidden;
-            height: 100vh;
+        body, html {
+            height: 100%; margin: 0; padding: 0;
+            background: radial-gradient(circle at center, #1a0a00 0, #000 70%);
+            font-family: 'VT323', monospace; color: var(--orange); overflow: hidden;
         }
 
-        /* Scanline Overlay */
-        body::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
-            background-size: 100% 4px;
-            z-index: 1000;
-            pointer-events: none;
+        /* Original Overlays */
+        .overlay-scan {
+            position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+            background: repeating-linear-gradient(to bottom, rgba(255,138,60,0.1) 0px, transparent 2px);
         }
 
+        /* Login */
         #login-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: black; z-index: 2000;
+            position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-
         input {
             background: transparent; border: 1px solid var(--orange); color: var(--orange);
-            padding: 12px; text-align: center; outline: none; margin-top: 20px; width: 300px;
-            box-shadow: 0 0 10px rgba(255, 69, 0, 0.3);
+            font-family: 'VT323', monospace; font-size: 24px; padding: 10px; text-align: center;
+            outline: none; box-shadow: 0 0 15px var(--orange); margin-top: 20px;
         }
 
-        /* Draggable Window Style */
+        /* Desktop & Shake */
+        .desktop { position: relative; width: 100%; height: 100%; display: none; }
+        .stage3-shake { animation: globalShake 0.15s infinite; }
+
+        /* Window Styling from Reference */
         .win {
-            position: absolute;
-            border: 1px solid var(--orange);
-            background: rgba(5, 2, 0, 0.95);
-            min-width: 220px;
-            display: none;
-            z-index: 50;
-            box-shadow: 0 0 20px rgba(255, 69, 0, 0.15);
+            position: absolute; background: rgba(0,0,0,0.92); border: 2px solid var(--orange);
+            box-shadow: 0 0 20px rgba(255,138,60,0.4); overflow: hidden;
         }
-
         .win-header {
-            background: rgba(255, 69, 0, 0.15);
-            padding: 5px 10px;
-            font-weight: bold;
-            font-size: 11px;
-            cursor: grab;
-            border-bottom: 1px solid var(--orange);
-            display: flex;
-            justify-content: space-between;
+            background: rgba(255,138,60,0.2); padding: 5px 10px; font-size: 15px;
+            border-bottom: 1px solid var(--orange); cursor: move; display: flex; justify-content: space-between;
         }
+        .win-body { padding: 12px; font-size: 16px; line-height: 1.2; }
 
-        .win-content { padding: 12px; font-size: 11px; line-height: 1.4; }
-
-        /* Buttons */
-        .btn-group { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
-        button {
-            background: transparent; border: 1px solid var(--orange); color: var(--orange);
-            font-family: inherit; font-size: 10px; padding: 4px 8px; cursor: pointer;
-        }
-        button:hover { background: var(--orange); color: black; }
-        .btn-null { border-color: #444; color: #666; }
-
-        /* Status Colors */
-        .status-online { background: var(--green); color: black; padding: 0 4px; font-weight: bold; }
+        /* Glitch Effects */
+        .hard-glitch { animation: hardGlitchShake .18s steps(2) infinite; filter: hue-rotate(-22deg) saturate(1.4) brightness(1.1); }
         
-        /* Specific Windows */
-        #w-main { top: 20px; left: 20px; width: 260px; }
-        #w-list { top: 20px; right: 20px; width: 280px; height: 85vh; }
-        #w-trace { bottom: 20px; left: 20px; width: 320px; border-color: #ff0000; }
-        #w-monitor { bottom: 20px; right: 20px; width: 280px; }
-        #w-feed { top: 25%; left: 30%; width: 400px; border-color: #00ccff; }
-
-        /* Alert Box */
-        #admin-alert {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #ff0000; color: white; padding: 25px; border: 4px solid #fff;
-            z-index: 5000; display: none; text-align: center;
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8);
+        @keyframes globalShake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(1px,-1px); }
+            50% { transform: translate(-2px,1px); }
+            100% { transform: translate(0,0); }
         }
 
-        .feed-img { width: 100%; height: 200px; object-fit: cover; filter: grayscale(1) sepia(0.5); opacity: 0.8; }
+        @keyframes hardGlitchShake {
+            0% { transform: translate(-2px,1px) skewX(-1deg); }
+            50% { transform: translate(3px,-2px) skewX(2deg); }
+            100% { transform: translate(-1px,2px) skewX(-2deg); }
+        }
+
+        /* Map UI */
+        #map-bg { width: 100%; height: 200px; background: #080808; position: relative; border: 1px solid #331100; overflow: hidden; }
+        .target-dot { position: absolute; width: 10px; height: 10px; background: var(--red); border-radius: 50%; box-shadow: 0 0 15px var(--red); animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+
+        /* Footer */
+        .footer { position: fixed; bottom: 0; width: 100%; padding: 6px 20px; background: rgba(0,0,0,0.9); border-top: 1px solid rgba(255,138,60,0.3); font-size: 14px; display: flex; justify-content: space-between; z-index: 1001; }
     </style>
 </head>
 <body>
 
-    <div id="admin-alert">
-        <h2 style="margin:0">ACCESS DENIED</h2>
-        <p>ADMIN VERIFICATION REQUIRED<br>UNAUTHORIZED COMMAND DETECTED</p>
-        <button onclick="closeAlert()" style="border-color:white; color:white;">DISMISS</button>
-    </div>
+<div id="login-screen">
+    <h1 style="font-size: 50px; letter-spacing: 12px; color: var(--red);">[ AFR.OS // ANTSH_FED ]</h1>
+    <input type="password" id="passInput" placeholder="ACCESS_KEY" autofocus>
+</div>
 
-    <div id="login-screen">
-        <h2 style="letter-spacing: 5px;">SYSTEM://AFR_CORE</h2>
-        <input type="password" id="passInput" placeholder="ENTER CLEARANCE KEY" autofocus>
-    </div>
+<div class="overlay-scan"></div>
 
-    <div class="win" id="w-main">
-        <div class="win-header">SYSTEM_STATUS <span>[ROOT]</span></div>
-        <div class="win-content">
-            ADMIN: ANSHUXXX XXXXXXXX<br>
-            RANK: SUPREME_DIRECTOR<br>
-            STATUS: <span class="status-online">ONLINE</span><br>
-            > KEYLOGGER: ACTIVE<br>
-            > STEALTH_MODE: ON
-            <div class="btn-group">
-                <button onclick="randomizeAll()">REROUTE</button>
-                <button class="btn-null" onclick="showAdminAlert()">TERMINATE</button>
+<div class="desktop" id="main-desktop">
+    <div class="win" id="w-tracker" style="top: 10%; left: 300px; width: 400px;">
+        <div class="win-header">AFR_SATELLITE_LINK // TRACE_UI</div>
+        <div class="win-body">
+            <div id="map-bg"><div class="target-dot" id="dot"></div></div>
+            <div style="margin-top: 10px;">
+                ASSET: <span id="target-name" style="color: var(--amber);">SCANNING...</span><br>
+                COORDS: <span id="target-coords">0.0000, 0.0000</span>
             </div>
         </div>
     </div>
 
-    <div class="win" id="w-feed">
-        <div class="win-header" style="color:#00ccff;">ACTIVE_FEEDS // GLOBAL_NODES</div>
-        <div class="win-content" style="padding:0;">
-            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400" class="feed-img" id="cam-feed">
-            <div style="padding:10px;">
-                NODE: UAE_CENTRAL_01<br>
-                <div class="btn-group">
-                    <button onclick="nextCam()">NEXT_NODE</button>
-                    <button class="btn-null" onclick="showAdminAlert()">OVERRIDE</button>
-                </div>
-            </div>
-        </div>
+    <div class="win" id="w-console" style="bottom: 60px; left: 30px; width: 480px;">
+        <div class="win-header">ANSH_FED_ORG // KERNEL_LOG</div>
+        <div class="win-body"><div id="hacker-log" style="color: var(--green); height: 140px; overflow: hidden;"></div></div>
     </div>
 
-    <div class="win" id="w-list">
-        <div class="win-header">WHITELISTED_PERSONNEL</div>
-        <div class="win-content" style="height: 75vh; overflow-y: auto; color: var(--green);">
-            - MOKSH PRASHANTKUMAR SUTHAR<br>- MOOSA KHAN<br>- NAVANEETH PAYYADAKKATH<br>
-            - PAYAS KULHARI<br>- RAYAN NIBU<br>- SAI TEJ SIDDHARTH AKULA<br>
-            - SANJIT SURESH KUMAR<br>- ABHIRAM E. PANAYANTHATTA<br>- ADHISH JACOB ANIL<br>
-            - ADIL ASLAM ALI CHILWAN<br>- ADITYA KARAN HARCHAND<br>- AROMAL AYYAPPAN SAMBAJI<br>
-            - ARYAN MANDE<br>- HARIHARA GOMATHINATHAN<br>- ISHAN S. R. K. BEHERA<br>
-            - ISIT S. R. K. BEHERA<br>- JONATHAN RAJ<br>- MOHAMMED IYAD ISMAIL KHAN<br>
-            - MOHAMMED RAYHAN<br>- MOHAMMED RAYYAN KHAN<br>- SAPTARSHEE SARKAR<br>
-            - SAQIB ALI<br>- SARTHAK V. SHAH<br>- SAYYID ABDULLAH<br>
-            - SHINE SHYJU<br>- SHIVAM PRATEEK<br>- ZAEEM
-        </div>
+    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 280px; height: 85vh;">
+        <div class="win-header">FEDERAL_ASSETS_LIST</div>
+        <div class="win-body" id="personnel-list" style="overflow-y: auto; height: 78vh; color: var(--green); font-size: 14px;"></div>
     </div>
+</div>
 
-    <div class="win" id="w-trace">
-        <div class="win-header" style="color:#ff0000;">LIVE_IP_TRACKER_V5.0</div>
-        <div class="win-content">
-            INTERCEPTING DATA...<br>
-            <span id="trace-name" style="background:var(--green); color:black; font-weight:bold;">SEARCHING...</span><br>
-            IP_ADDR: <span id="trace-ip">236.31.6.4</span>
-            <div class="btn-group">
-                <button class="btn-null" onclick="showAdminAlert()">NULL</button>
-                <button class="btn-null" onclick="showAdminAlert()">NULL</button>
-            </div>
-        </div>
-    </div>
+<div class="footer">
+    <span>DIPLOMACY_LAYER: BYPASSED // AUTH: ANSH_FEDERAL</span>
+    <span id="sys-time">TIME: 00:00:00</span>
+</div>
 
-    <div class="win" id="w-monitor">
-        <div class="win-header">ADMIN_MONITOR</div>
-        <div class="win-content">
-            [OK] PACKET_SNIFFER: RUNNING<br>
-            [OK] KEYLOG_FEED: REDIRECTED<br>
-            --------------------------<br>
-            monitoring nodes...
-        </div>
-    </div>
+<script>
+    const pass = "A$N#H";
+    const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
 
-    <script>
-        const pass = "A$N#H";
-        const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "ARYAN MANDE", "JONATHAN RAJ", "MOHAMMED RAYYAN KHAN"];
-        const cams = [
-            "https://images.unsplash.com/photo-1545147986-a9d6f2103756?w=400",
-            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400",
-            "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400"
-        ];
+    const logPhrases = ["Establishing secure tunnel...", "AnshFedOrg protocol initiated.", "Intercepting local node...", "Data packet received.", "Updating classmate geolocation...", "Satellite link stabilized.", "Syncing with UAE central server..."];
 
-        document.getElementById('passInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                if (this.value === pass) {
-                    document.getElementById('login-screen').style.display = 'none';
-                    document.querySelectorAll('.win').forEach(w => {
-                        w.style.display = 'block';
-                        makeDraggable(w);
-                    });
-                    startLoop();
-                } else { alert("KEY INVALID"); this.value = ""; }
-            }
-        });
-
-        function makeDraggable(elmnt) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            const header = elmnt.querySelector(".win-header");
-            header.onmousedown = (e) => {
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-                document.onmousemove = (e) => {
-                    e.preventDefault();
-                    pos1 = pos3 - e.clientX;
-                    pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-                    elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-                };
-            };
+    document.getElementById('passInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && this.value === pass) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-desktop').style.display = 'block';
+            initSystem();
         }
+    });
 
-        function showAdminAlert() { document.getElementById('admin-alert').style.display = 'block'; }
-        function closeAlert() { document.getElementById('admin-alert').style.display = 'none'; }
+    function initSystem() {
+        const list = document.getElementById('personnel-list');
+        classmates.forEach(name => { list.innerHTML += `> ${name}<br>`; });
+        startLogTyping();
+        startTracking();
+        startTime();
+        scheduleGlitch();
+    }
 
-        function randomizeAll() {
-            document.querySelectorAll('.win').forEach(w => {
-                w.style.top = Math.random() * (window.innerHeight - 300) + "px";
-                w.style.left = Math.random() * (window.innerWidth - 300) + "px";
-            });
-        }
+    // Glitch Logic from Reference
+    function scheduleGlitch() {
+        const delay = 5000 + Math.random() * 8000; // Trigger every 5-13 seconds
+        setTimeout(() => {
+            const desk = document.getElementById('main-desktop');
+            const tracker = document.getElementById('w-tracker');
+            
+            // Apply global shake
+            desk.classList.add('stage3-shake');
+            tracker.classList.add('hard-glitch');
 
-        function nextCam() {
-            document.getElementById('cam-feed').src = cams[Math.floor(Math.random() * cams.length)];
-        }
+            setTimeout(() => {
+                desk.classList.remove('stage3-shake');
+                tracker.classList.remove('hard-glitch');
+                scheduleGlitch();
+            }, 400); // Glitch duration
+        }, delay);
+    }
 
-        function startLoop() {
-            setInterval(() => {
-                const name = classmates[Math.floor(Math.random() * classmates.length)];
-                document.getElementById('trace-name').innerText = "ADMIN ACCESS: " + name + " LOCATED";
-                document.getElementById('trace-ip').innerText = `238.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*100)}.1`;
-            }, 4000);
-        }
-    </script>
+    function startLogTyping() {
+        const logBox = document.getElementById('hacker-log');
+        let i = 0;
+        setInterval(() => {
+            logBox.innerHTML += `[AFR_LOG]: ${logPhrases[i % logPhrases.length]}<br>`;
+            i++;
+            if (logBox.children.length > 8) logBox.innerHTML = logBox.innerHTML.split('<br>').slice(1).join('<br>');
+        }, 2200);
+    }
+
+    function startTracking() {
+        setInterval(() => {
+            const name = classmates[Math.floor(Math.random() * classmates.length)];
+            document.getElementById('target-name').innerText = name;
+            document.getElementById('target-coords').innerText = `${(Math.random()*90).toFixed(4)}° N, ${(Math.random()*180).toFixed(4)}° E`;
+            const dot = document.getElementById('dot');
+            dot.style.left = Math.random() * 90 + "%";
+            dot.style.top = Math.random() * 80 + "%";
+        }, 4000);
+    }
+
+    function startTime() { setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000); }
+</script>
 </body>
 </html>
