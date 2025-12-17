@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DIPLOMACY.OS // PREVIEW</title>
+    <style>
+        body {
+            background-color: #0d0200;
+            color: #ff5f00; /* The orange glow */
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px;
+            text-transform: uppercase;
+        }
+        .terminal-text {
+            border-right: 2px solid #ff5f00;
+            white-space: pre-wrap;
+            overflow: hidden;
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink { 50% { border-color: transparent; } }
+    </style>
+</head>
+<body>
+    <div id="output"></div>
+
+    <script>
+        const text = "DIPLOMACY.OS // BOOTING...\nREGION: UAE_NODE\nSTATUS: ONLINE\n\n> SEEK DIPLOMACY\n> THE FUTURE IS BUFFERING...";
+        let i = 0;
+        function typeWriter() {
+            if (i < text.length) {
+                document.getElementById("output").innerHTML += text.charAt(i);
+                i++;
+                setTimeout(typeWriter, 50);
+            }
+        }
+        typeWriter();
+    </script>
+</body>
+</html>
