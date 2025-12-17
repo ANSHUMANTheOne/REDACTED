@@ -2,12 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ANSHUMAN FEDERAL RESEARCH // ADMIN_ACCESS</title>
+    <title>ANSHUMAN FEDERAL RESEARCH // SUPREME_ADMIN</title>
     <style>
         body {
             background-color: #050505;
-            background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
-            background-size: 25px 25px;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/41/World_map_blank_without_borders.svg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 80%;
+            background-attachment: fixed;
+            /* Gray world silhouette tint */
+            filter: grayscale(100%) brightness(15%) contrast(150%);
             color: #ff4500;
             font-family: 'Courier New', Courier, monospace;
             margin: 0;
@@ -15,7 +20,14 @@
             height: 100vh;
         }
 
-        body::before {
+        .ui-wrapper {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            filter: none;
+            z-index: 1;
+        }
+
+        .ui-wrapper::before {
             content: " ";
             display: block;
             position: absolute;
@@ -36,6 +48,7 @@
             justify-content: center;
             align-items: center;
             color: #ff0000;
+            text-align: center;
         }
 
         input {
@@ -47,7 +60,8 @@
             outline: none;
             font-family: 'Courier New', monospace;
             margin-top: 20px;
-            width: 250px;
+            width: 280px;
+            font-size: 18px;
         }
 
         #boot-screen {
@@ -64,9 +78,9 @@
         .window {
             position: absolute;
             border: 1px solid #ff4500;
-            background: rgba(0, 0, 0, 0.9);
-            box-shadow: 0 0 15px rgba(255, 69, 0, 0.2);
-            padding: 12px;
+            background: rgba(0, 0, 0, 0.92);
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+            padding: 10px;
             font-size: 10px;
             line-height: 1.3;
             display: none;
@@ -80,112 +94,202 @@
             text-transform: uppercase;
         }
 
-        #main-system { top: 5%; left: 5%; width: 280px; }
-        #whitelist { top: 5%; right: 5%; width: 320px; color: #00ff41; border-color: #00ff41; height: 80vh; overflow-y: hidden; }
-        #tracker { bottom: 5%; left: 5%; width: 350px; border-color: #ff0000; color: #ff0000; }
-        #bg-process { bottom: 5%; right: 5%; width: 300px; color: #ffaa00; border-color: #ffaa00; }
+        #surveillance-grid {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 580px;
+            height: 380px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 5px;
+            border-color: #00ccff;
+            color: #00ccff;
+        }
 
-        .success { color: white; background: #00ff41; padding: 0 5px; font-weight: bold; }
-        .redacted { background: #ff4500; color: #ff4500; }
+        .cam-feed {
+            background: #111;
+            border: 1px solid #333;
+            height: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cam-feed img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.5;
+            filter: grayscale(1) brightness(0.7) contrast(1.2);
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .cam-label {
+            position: absolute;
+            top: 2px; left: 2px;
+            font-size: 8px;
+            background: rgba(0,0,0,0.8);
+            z-index: 2;
+            padding: 0 3px;
+        }
+
+        #main-system { top: 5%; left: 2%; width: 250px; }
+        #whitelist { top: 5%; right: 2%; width: 280px; color: #00ff41; border-color: #00ff41; height: 85vh; overflow-y: hidden; }
+        #tracker { bottom: 5%; left: 2%; width: 300px; border-color: #ff0000; color: #ff0000; }
+        #admin-monitor { bottom: 5%; right: 2%; width: 280px; color: #ffaa00; border-color: #ffaa00; }
+
+        .fbi-alert {
+            position: absolute;
+            background: red;
+            color: white;
+            padding: 5px 15px;
+            font-weight: bold;
+            border: 2px solid white;
+            z-index: 500;
+            display: none;
+            animation: flash 0.5s infinite;
+        }
+
+        @keyframes flash { 50% { opacity: 0; } }
+        .success { color: white; background: #00ff41; padding: 0 5px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <h1>[ SECURITY CLEARANCE REQUIRED ]</h1>
-        <p>ENTER ADMIN ACCESS KEY</p>
-        <input type="password" id="passInput" placeholder="PASSWORD" autofocus>
+        <h1>[ FEDERAL AUTHORITY ONLY ]</h1>
+        <p>IDENTITY VERIFICATION REQUIRED</p>
+        <input type="password" id="passInput" placeholder="ENTER ACCESS KEY" autofocus>
     </div>
 
     <div id="boot-screen">
         <div id="boot-text"></div>
     </div>
 
-    <div class="window" id="main-system">
-        <div class="header">SYSTEM://AFR_CORE</div>
-        ADMIN: <span class="redacted">AnshXXXX</span><br>
-        RANK: SUPREME_DIRECTOR<br>
-        STATUS: <span class="success">ONLINE</span><br>
-        --------------------------<br>
-        > KEYLOGGER: ACTIVE<br>
-        > STEALTH_MODE: ON
-    </div>
+    <div class="ui-wrapper">
+        <div class="fbi-alert" id="fbi-pop">CAUTION: DATA INTERCEPTION ACTIVE</div>
 
-    <div class="window" id="whitelist">
-        <div class="header">WHITELISTED_PERSONNEL</div>
-        - MOKSH PRASHANTKUMAR SUTHAR<br>- MOOSA KHAN<br>- NAVANEETH PAYYADAKKATH<br>
-        - PAYAS KULHARI<br>- RAYAN NIBU<br>- SAI TEJ SIDDHARTH AKULA<br>
-        - SANJIT SURESH KUMAR<br>- ABHIRAM ERAYANKOTTU PANAYANTHATTA<br>
-        - ADHISH JACOB ANIL<br>- ADIL ASLAM ALI CHILWAN<br>
-        - ADITYA KARAN HARCHAND<br>- AROMAL AYYAPPAN SAMBAJI<br>
-        - ARYAN MANDE<br>- HARIHARA GOMATHINATHAN<br>
-        - ISHAN S. R. K. BEHERA<br>- ISIT S. R. K. BEHERA<br>
-        - JONATHAN RAJ<br>- MOHAMMED IYAD ISMAIL KHAN<br>
-        - MOHAMMED RAYHAN<br>- MOHAMMED RAYYAN KHAN<br>
-        - SAPTARSHEE SARKAR<br>- SAQIB ALI<br>- SARTHAK V. SHAH<br>
-        - SAYYID ABDULLAH<br>- SHINE SHYJU<br>- SHIVAM PRATEEK<br>- ZAEEM
-    </div>
+        <div class="window" id="surveillance-grid">
+            <div class="header" style="grid-column: span 3;">ACTIVE_SURVEILLANCE_FEED // AUTO_CYCLING</div>
+            <div class="cam-feed"><div class="cam-label">CAM_01</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_02</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_03</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_04</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_05</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_06</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_07</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_08</div><img class="feed-img" src=""></div>
+            <div class="cam-feed"><div class="cam-label">CAM_09</div><img class="feed-img" src=""></div>
+        </div>
 
-    <div class="window" id="tracker">
-        <div class="header">LIVE_IP_TRACKER_V5.0</div>
-        <div id="status-line">SCANNING CLASSMATE NETWORK...</div>
-        <div id="target-output">INITIATING...</div>
-        <div id="ip-output">0.0.0.0</div>
-    </div>
+        <div class="window" id="main-system">
+            <div class="header">SYSTEM://AFR_CORE</div>
+            STATUS: <span class="success">ONLINE</span><br>
+            THREAT: <span style="color:red">NULL</span><br>
+            --------------------------<br>
+            > DIRECTIVE: MONITOR_ALL
+        </div>
 
-    <div class="window" id="bg-process">
-        <div class="header">ADMIN_MONITOR</div>
-        [OK] PACKET_SNIFFER: RUNNING<br>
-        [OK] KEYLOG_FEED: REDIRECTED TO ADMIN<br>
-        --------------------------<br>
-        <div id="log-feed">monitoring nodes...</div>
+        <div class="window" id="whitelist">
+            <div class="header">PERSONNEL_DATABASE</div>
+            - MOKSH PRASHANTKUMAR SUTHAR<br>- MOOSA KHAN<br>- NAVANEETH PAYYADAKKATH<br>
+            - PAYAS KULHARI<br>- RAYAN NIBU<br>- SAI TEJ SIDDHARTH AKULA<br>
+            - SANJIT SURESH KUMAR<br>- ABHIRAM ERAYANKOTTU PANAYANTHATTA<br>
+            - ADHISH JACOB ANIL<br>- ADIL ASLAM ALI CHILWAN<br>
+            - ADITYA KARAN HARCHAND<br>- AROMAL AYYAPPAN SAMBAJI<br>
+            - ARYAN MANDE<br>- HARIHARA GOMATHINATHAN<br>
+            - ISHAN S. R. K. BEHERA<br>- ISIT S. R. K. BEHERA<br>
+            - JONATHAN RAJ<br>- MOHAMMED IYAD ISMAIL KHAN<br>
+            - MOHAMMED RAYHAN<br>- MOHAMMED RAYYAN KHAN<br>
+            - SAPTARSHEE SARKAR<br>- SAQIB ALI<br>- SARTHAK V. SHAH<br>
+            - SAYYID ABDULLAH<br>- SHINE SHYJU<br>- SHIVAM PRATEEK<br>- ZAEEM
+        </div>
+
+        <div class="window" id="admin-monitor">
+            <div class="header">ADMIN_MONITOR</div>
+            NAME: <strong>Anshuxxx xxxxxxxx</strong><br>
+            ROLE: <strong>SUPREME_ADMIN</strong><br>
+            AUTH: VERIFIED [LVL_9]<br>
+            --------------------------<br>
+            [OK] KEYLOGGER: ACTIVE<br>
+            [OK] PACKET_SNIFFER: ON
+        </div>
     </div>
 
     <script>
-        const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM ERAYANKOTTU PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN"];
         const correctPass = "A$N#H";
+        const camImages = [
+            "https://images.unsplash.com/photo-1545147986-a9d6f2103756?w=300",
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300",
+            "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=300",
+            "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=300",
+            "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300",
+            "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300",
+            "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300",
+            "https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=300",
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300",
+            "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300",
+            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300",
+            "https://images.unsplash.com/photo-1449156059431-7899554189bc?w=300"
+        ];
 
-        const passInput = document.getElementById('passInput');
-        passInput.addEventListener('keypress', function (e) {
+        document.getElementById('passInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                if (passInput.value === correctPass) {
+                if (this.value === correctPass) {
                     document.getElementById('login-screen').style.display = 'none';
                     document.getElementById('boot-screen').style.display = 'block';
                     typeBoot();
                 } else {
-                    alert("UNAUTHORIZED ACCESS ATTEMPT REJECTED.");
-                    passInput.value = "";
+                    alert("AUTHORIZATION FAILED.");
                 }
             }
         });
 
-        const bootLines = ["LOADING ADMIN_PROTOCOL...", "ACCESSING ANSHUMAN_FEDERAL_RESEARCH...", "USER: AnshXXXX IDENTIFIED.", "PERMISSION_LEVEL: SUPREME.", "INITIALIZING TRACKER..."];
-        let lineIdx = 0;
         function typeBoot() {
-            if (lineIdx < bootLines.length) {
-                document.getElementById('boot-text').innerHTML += bootLines[lineIdx] + "<br>";
-                lineIdx++;
-                setTimeout(typeBoot, 500);
-            } else {
-                setTimeout(() => {
-                    document.getElementById('boot-screen').style.display = 'none';
-                    document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
-                    runSystem();
-                }, 800);
-            }
+            const lines = ["BOOTING AFR_OS...", "ESTABLISHING SATELLITE LINK...", "ADMIN: Anshuxxx xxxxxxxx VERIFIED.", "ACCESS GRANTED."];
+            let i = 0;
+            const target = document.getElementById('boot-text');
+            const itv = setInterval(() => {
+                target.innerHTML += lines[i++] + "<br>";
+                if(i === lines.length) {
+                    clearInterval(itv);
+                    setTimeout(() => {
+                        document.getElementById('boot-screen').style.display = 'none';
+                        document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
+                        initSurveillance();
+                        startFbiPopups();
+                    }, 1000);
+                }
+            }, 500);
         }
 
-        function runSystem() {
+        function initSurveillance() {
+            const imgs = document.querySelectorAll('.feed-img');
+            imgs.forEach((img, idx) => {
+                img.src = camImages[idx % camImages.length];
+            });
+
+            // Change one random camera feed every 3 seconds
             setInterval(() => {
-                const fakeIp = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 255)}`;
-                const randomName = classmates[Math.floor(Math.random() * classmates.length)];
-                document.getElementById('status-line').innerHTML = "INTERCEPTING DATA...";
-                document.getElementById('ip-output').innerHTML = `IP_ADDR: ${fakeIp}`;
-                document.getElementById('target-output').innerHTML = `LOCATING: ${randomName}`;
-                if(Math.random() > 0.7) {
-                    document.getElementById('target-output').innerHTML = `<span class="success">ADMIN ACCESS: ${randomName} LOCATED</span>`;
+                const randomCam = imgs[Math.floor(Math.random() * imgs.length)];
+                const randomImg = camImages[Math.floor(Math.random() * camImages.length)];
+                randomCam.style.opacity = 0;
+                setTimeout(() => {
+                    randomCam.src = randomImg;
+                    randomCam.style.opacity = 0.5;
+                }, 500);
+            }, 3000);
+        }
+
+        function startFbiPopups() {
+            setInterval(() => {
+                if(Math.random() > 0.85) {
+                    const pop = document.getElementById('fbi-pop');
+                    pop.style.top = Math.random() * 80 + '%';
+                    pop.style.left = Math.random() * 80 + '%';
+                    pop.style.display = 'block';
+                    setTimeout(() => pop.style.display = 'none', 1200);
                 }
-            }, 2000);
+            }, 4000);
         }
     </script>
 </body>
