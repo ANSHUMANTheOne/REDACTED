@@ -6,12 +6,13 @@
     <style>
         body {
             background-color: #050505;
+            /* World Map Silhouette Background */
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/41/World_map_blank_without_borders.svg');
             background-repeat: no-repeat;
             background-position: center;
             background-size: 80%;
             background-attachment: fixed;
-            /* Gray world silhouette tint */
+            /* Gray tint filter for the map */
             filter: grayscale(100%) brightness(15%) contrast(150%);
             color: #ff4500;
             font-family: 'Courier New', Courier, monospace;
@@ -23,10 +24,11 @@
         .ui-wrapper {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            filter: none;
+            filter: none; /* Keeps the UI sharp while background is dark */
             z-index: 1;
         }
 
+        /* CRT Scanline Filter */
         .ui-wrapper::before {
             content: " ";
             display: block;
@@ -38,6 +40,7 @@
             pointer-events: none;
         }
 
+        /* Login Screen */
         #login-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -64,6 +67,7 @@
             font-size: 18px;
         }
 
+        /* Boot Screen */
         #boot-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -94,6 +98,7 @@
             text-transform: uppercase;
         }
 
+        /* Surveillance Grid */
         #surveillance-grid {
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
@@ -119,7 +124,7 @@
             height: 100%;
             object-fit: cover;
             opacity: 0.5;
-            filter: grayscale(1) brightness(0.7) contrast(1.2);
+            filter: grayscale(1) brightness(0.7);
             transition: opacity 0.5s ease-in-out;
         }
 
@@ -132,6 +137,7 @@
             padding: 0 3px;
         }
 
+        /* Window Layout Positions */
         #main-system { top: 5%; left: 2%; width: 250px; }
         #whitelist { top: 5%; right: 2%; width: 280px; color: #00ff41; border-color: #00ff41; height: 85vh; overflow-y: hidden; }
         #tracker { bottom: 5%; left: 2%; width: 300px; border-color: #ff0000; color: #ff0000; }
@@ -184,7 +190,7 @@
         <div class="window" id="main-system">
             <div class="header">SYSTEM://AFR_CORE</div>
             STATUS: <span class="success">ONLINE</span><br>
-            THREAT: <span style="color:red">NULL</span><br>
+            THREAT_LEVEL: <span style="color:red">RED</span><br>
             --------------------------<br>
             > DIRECTIVE: MONITOR_ALL
         </div>
@@ -208,10 +214,16 @@
             <div class="header">ADMIN_MONITOR</div>
             NAME: <strong>Anshuxxx xxxxxxxx</strong><br>
             ROLE: <strong>SUPREME_ADMIN</strong><br>
-            AUTH: VERIFIED [LVL_9]<br>
+            AUTH: VERIFIED [LVL_10]<br>
             --------------------------<br>
             [OK] KEYLOGGER: ACTIVE<br>
             [OK] PACKET_SNIFFER: ON
+        </div>
+
+        <div class="window" id="tracker">
+            <div class="header">TRACE_UTILITY</div>
+            <div id="status-line">SCANNING NODES...</div>
+            <div id="ip-output">IP: 0.0.0.0</div>
         </div>
     </div>
 
@@ -226,10 +238,7 @@
             "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300",
             "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300",
             "https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=300",
-            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300",
-            "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300",
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300",
-            "https://images.unsplash.com/photo-1449156059431-7899554189bc?w=300"
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300"
         ];
 
         document.getElementById('passInput').addEventListener('keypress', function (e) {
@@ -239,13 +248,13 @@
                     document.getElementById('boot-screen').style.display = 'block';
                     typeBoot();
                 } else {
-                    alert("AUTHORIZATION FAILED.");
+                    alert("ACCESS DENIED: TRACING UNAUTHORIZED USER...");
                 }
             }
         });
 
         function typeBoot() {
-            const lines = ["BOOTING AFR_OS...", "ESTABLISHING SATELLITE LINK...", "ADMIN: Anshuxxx xxxxxxxx VERIFIED.", "ACCESS GRANTED."];
+            const lines = ["INITIALIZING AFR_CORE...", "CONNECTING TO GLOBAL SURVEILLANCE...", "ADMIN: Anshuxxx xxxxxxxx CONFIRMED.", "ACCESS GRANTED."];
             let i = 0;
             const target = document.getElementById('boot-text');
             const itv = setInterval(() => {
@@ -256,7 +265,7 @@
                         document.getElementById('boot-screen').style.display = 'none';
                         document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
                         initSurveillance();
-                        startFbiPopups();
+                        startInterfaceLoops();
                     }, 1000);
                 }
             }, 500);
@@ -268,7 +277,7 @@
                 img.src = camImages[idx % camImages.length];
             });
 
-            // Change one random camera feed every 3 seconds
+            // Cycle random camera every 3 seconds
             setInterval(() => {
                 const randomCam = imgs[Math.floor(Math.random() * imgs.length)];
                 const randomImg = camImages[Math.floor(Math.random() * camImages.length)];
@@ -280,16 +289,23 @@
             }, 3000);
         }
 
-        function startFbiPopups() {
+        function startInterfaceLoops() {
+            // Random FBI Popups
             setInterval(() => {
-                if(Math.random() > 0.85) {
+                if(Math.random() > 0.8) {
                     const pop = document.getElementById('fbi-pop');
                     pop.style.top = Math.random() * 80 + '%';
                     pop.style.left = Math.random() * 80 + '%';
                     pop.style.display = 'block';
-                    setTimeout(() => pop.style.display = 'none', 1200);
+                    setTimeout(() => pop.style.display = 'none', 1000);
                 }
             }, 4000);
+
+            // Fake IP Tracker Loop
+            setInterval(() => {
+                const ip = `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*100)}.${Math.floor(Math.random()*255)}`;
+                document.getElementById('ip-output').innerText = "IP: " + ip;
+            }, 2000);
         }
     </script>
 </body>
