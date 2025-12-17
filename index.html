@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AFR.OS // CORE_SYSTEM</title>
+    <title>AFR.OS // SUPREME_FED_ORG</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #000;
-            --orange: #ff8a3c;
+            --orange: #ff4500;
+            --red: #ff0000;
+            --green: #00ff41;
             --amber: #ffcc66;
-            --green: #00ff88;
-            --red: #ff3e3e;
         }
 
+        /* Deep Gradient Background from Reference */
         body, html {
             height: 100%; margin: 0; padding: 0;
-            background: radial-gradient(circle at center, #1a0a00 0, #000 70%);
+            background: radial-gradient(circle at center, #2b0d00 0%, #110500 40%, #000 100%);
             font-family: 'VT323', monospace; color: var(--orange); overflow: hidden;
         }
 
-        /* Original Overlays */
+        /* CRT Overlays */
         .overlay-scan {
             position: fixed; inset: 0; pointer-events: none; z-index: 1000;
-            background: repeating-linear-gradient(to bottom, rgba(255,138,60,0.1) 0px, transparent 2px);
+            background: repeating-linear-gradient(to bottom, rgba(255,69,0,0.05) 0px, transparent 2px);
         }
 
-        /* Login */
+        /* Login Screen */
         #login-screen {
             position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -37,80 +37,69 @@
             outline: none; box-shadow: 0 0 15px var(--orange); margin-top: 20px;
         }
 
-        /* Desktop & Shake */
+        /* Desktop Container */
         .desktop { position: relative; width: 100%; height: 100%; display: none; }
-        .stage3-shake { animation: globalShake 0.15s infinite; }
 
-        /* Window Styling from Reference */
+        /* Window Styling */
         .win {
-            position: absolute; background: rgba(0,0,0,0.92); border: 2px solid var(--orange);
-            box-shadow: 0 0 20px rgba(255,138,60,0.4); overflow: hidden;
+            position: absolute; background: rgba(0,0,0,0.95); border: 1px solid var(--orange);
+            box-shadow: 0 0 25px rgba(255,69,0,0.3); overflow: hidden; z-index: 10;
         }
         .win-header {
-            background: rgba(255,138,60,0.2); padding: 5px 10px; font-size: 15px;
+            background: rgba(255,69,0,0.2); padding: 5px 10px; font-size: 14px;
             border-bottom: 1px solid var(--orange); cursor: move; display: flex; justify-content: space-between;
         }
-        .win-body { padding: 12px; font-size: 16px; line-height: 1.2; }
+        .win-body { padding: 10px; }
 
-        /* Glitch Effects */
-        .hard-glitch { animation: hardGlitchShake .18s steps(2) infinite; filter: hue-rotate(-22deg) saturate(1.4) brightness(1.1); }
-        
+        /* Infection Popups Styling */
+        .popup-variant-red { border: 2px solid var(--red) !important; box-shadow: 0 0 30px var(--red) !important; }
+        .popup-variant-red .win-header { background: rgba(255,0,0,0.4) !important; }
+
+        /* Glitch & Shake */
+        .stage3-shake { animation: globalShake 0.15s infinite; }
         @keyframes globalShake {
             0% { transform: translate(0,0); }
-            25% { transform: translate(1px,-1px); }
-            50% { transform: translate(-2px,1px); }
+            25% { transform: translate(2px,-2px); }
+            50% { transform: translate(-3px,1px); }
             100% { transform: translate(0,0); }
         }
 
-        @keyframes hardGlitchShake {
-            0% { transform: translate(-2px,1px) skewX(-1deg); }
-            50% { transform: translate(3px,-2px) skewX(2deg); }
-            100% { transform: translate(-1px,2px) skewX(-2deg); }
+        /* Typing Log */
+        #hacker-log { color: var(--green); height: 120px; overflow: hidden; font-size: 14px; }
+        
+        .footer {
+            position: fixed; bottom: 0; width: 100%; padding: 5px 20px;
+            background: rgba(0,0,0,0.9); border-top: 1px solid var(--orange);
+            font-size: 14px; display: flex; justify-content: space-between; z-index: 1001;
         }
-
-        /* Map UI */
-        #map-bg { width: 100%; height: 200px; background: #080808; position: relative; border: 1px solid #331100; overflow: hidden; }
-        .target-dot { position: absolute; width: 10px; height: 10px; background: var(--red); border-radius: 50%; box-shadow: 0 0 15px var(--red); animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
-
-        /* Footer */
-        .footer { position: fixed; bottom: 0; width: 100%; padding: 6px 20px; background: rgba(0,0,0,0.9); border-top: 1px solid rgba(255,138,60,0.3); font-size: 14px; display: flex; justify-content: space-between; z-index: 1001; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
-    <h1 style="font-size: 50px; letter-spacing: 12px; color: var(--red);">[ AFR.OS // ANTSH_FED ]</h1>
-    <input type="password" id="passInput" placeholder="ACCESS_KEY" autofocus>
+    <h1 style="font-size: 50px; letter-spacing: 10px; color: var(--red);">[ AFR.OS // CORE ]</h1>
+    <input type="password" id="passInput" placeholder="KEY_REQUIRED" autofocus>
 </div>
 
 <div class="overlay-scan"></div>
 
 <div class="desktop" id="main-desktop">
-    <div class="win" id="w-tracker" style="top: 10%; left: 300px; width: 400px;">
-        <div class="win-header">AFR_SATELLITE_LINK // TRACE_UI</div>
+    <div class="win" id="w-tracker" style="top: 10%; left: 30%; width: 400px;">
+        <div class="win-header">ANSH_FED_ORG // SATELLITE_UPLINK</div>
         <div class="win-body">
-            <div id="map-bg"><div class="target-dot" id="dot"></div></div>
-            <div style="margin-top: 10px;">
-                ASSET: <span id="target-name" style="color: var(--amber);">SCANNING...</span><br>
-                COORDS: <span id="target-coords">0.0000, 0.0000</span>
-            </div>
+            <div id="target-name" style="color: var(--amber);">SCANNING ASSETS...</div>
+            <div id="hacker-log"></div>
         </div>
     </div>
 
-    <div class="win" id="w-console" style="bottom: 60px; left: 30px; width: 480px;">
-        <div class="win-header">ANSH_FED_ORG // KERNEL_LOG</div>
-        <div class="win-body"><div id="hacker-log" style="color: var(--green); height: 140px; overflow: hidden;"></div></div>
-    </div>
-
-    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 280px; height: 85vh;">
-        <div class="win-header">FEDERAL_ASSETS_LIST</div>
-        <div class="win-body" id="personnel-list" style="overflow-y: auto; height: 78vh; color: var(--green); font-size: 14px;"></div>
+    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 300px; height: 80vh;">
+        <div class="win-header">WHITELISTED_PERSONNEL</div>
+        <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 70vh; color: var(--green);"></div>
     </div>
 </div>
 
 <div class="footer">
-    <span>DIPLOMACY_LAYER: BYPASSED // AUTH: ANSH_FEDERAL</span>
+    <span>SYSTEM: AFR.OS // STATUS: INFECTED</span>
     <span id="sys-time">TIME: 00:00:00</span>
 </div>
 
@@ -118,7 +107,8 @@
     const pass = "A$N#H";
     const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
 
-    const logPhrases = ["Establishing secure tunnel...", "AnshFedOrg protocol initiated.", "Intercepting local node...", "Data packet received.", "Updating classmate geolocation...", "Satellite link stabilized.", "Syncing with UAE central server..."];
+    const popupTitles = ["ANSH_FED_ORG // WARNING", "FBI // TRACE_DETECTED", "AFR.OS // KERNEL_BREACH", "SATELLITE // LOST_LINK", "ACCESS // DENIED"];
+    const popupMsgs = ["Unauthorized access to UAE_NODE_09", "Tracing IP: 192.168.1.1...", "Asset relocation in progress", "Federal Encryption bypassed", "Alert: AFR_ORG system override"];
 
     document.getElementById('passInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && this.value === pass) {
@@ -131,50 +121,54 @@
     function initSystem() {
         const list = document.getElementById('personnel-list');
         classmates.forEach(name => { list.innerHTML += `> ${name}<br>`; });
-        startLogTyping();
-        startTracking();
+        startLog();
         startTime();
-        scheduleGlitch();
+        scheduleInfection();
     }
 
-    // Glitch Logic from Reference
-    function scheduleGlitch() {
-        const delay = 5000 + Math.random() * 8000; // Trigger every 5-13 seconds
+    // Logic to spawn random variant dialog boxes
+    function spawnPopup() {
+        const desktop = document.getElementById('main-desktop');
+        const win = document.createElement('div');
+        win.className = 'win ' + (Math.random() > 0.5 ? 'popup-variant-red' : '');
+        
+        const x = Math.random() * 60 + 10;
+        const y = Math.random() * 50 + 10;
+        win.style.cssText = `top: ${y}%; left: ${x}%; width: 250px; z-index: 2000;`;
+
+        const title = popupTitles[Math.floor(Math.random() * popupTitles.length)];
+        const msg = popupMsgs[Math.floor(Math.random() * popupMsgs.length)];
+
+        win.innerHTML = `
+            <div class="win-header"><span>${title}</span><span onclick="this.closest('.win').remove()" style="cursor:pointer">X</span></div>
+            <div class="win-body" style="font-size:13px;">${msg}</div>
+        `;
+        desktop.appendChild(win);
+        
+        // Remove popup after a few seconds
+        setTimeout(() => win.remove(), 4000);
+    }
+
+    function scheduleInfection() {
+        const delay = 3000 + Math.random() * 5000;
         setTimeout(() => {
-            const desk = document.getElementById('main-desktop');
-            const tracker = document.getElementById('w-tracker');
-            
-            // Apply global shake
-            desk.classList.add('stage3-shake');
-            tracker.classList.add('hard-glitch');
+            document.getElementById('main-desktop').classList.add('stage3-shake');
+            spawnPopup();
+            if(Math.random() > 0.7) spawnPopup(); // Chance for double popups
 
             setTimeout(() => {
-                desk.classList.remove('stage3-shake');
-                tracker.classList.remove('hard-glitch');
-                scheduleGlitch();
-            }, 400); // Glitch duration
+                document.getElementById('main-desktop').classList.remove('stage3-shake');
+                scheduleInfection();
+            }, 300);
         }, delay);
     }
 
-    function startLogTyping() {
-        const logBox = document.getElementById('hacker-log');
-        let i = 0;
+    function startLog() {
+        const log = document.getElementById('hacker-log');
         setInterval(() => {
-            logBox.innerHTML += `[AFR_LOG]: ${logPhrases[i % logPhrases.length]}<br>`;
-            i++;
-            if (logBox.children.length > 8) logBox.innerHTML = logBox.innerHTML.split('<br>').slice(1).join('<br>');
-        }, 2200);
-    }
-
-    function startTracking() {
-        setInterval(() => {
-            const name = classmates[Math.floor(Math.random() * classmates.length)];
-            document.getElementById('target-name').innerText = name;
-            document.getElementById('target-coords').innerText = `${(Math.random()*90).toFixed(4)}° N, ${(Math.random()*180).toFixed(4)}° E`;
-            const dot = document.getElementById('dot');
-            dot.style.left = Math.random() * 90 + "%";
-            dot.style.top = Math.random() * 80 + "%";
-        }, 4000);
+            log.innerHTML += `[AFR_SYS]: ${Math.random().toString(16).substr(2, 8)} intercepted...<br>`;
+            if (log.children.length > 8) log.innerHTML = log.innerHTML.split('<br>').slice(1).join('<br>');
+        }, 1500);
     }
 
     function startTime() { setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000); }
