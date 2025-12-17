@@ -11,39 +11,38 @@
             --red: #ff0000;
             --green: #00ff41;
             --amber: #ffcc66;
+            --scanline: rgba(255, 69, 0, 0.1);
         }
 
-        /* Deep Gradient Background from Reference */
         body, html {
             height: 100%; margin: 0; padding: 0;
-            background: radial-gradient(circle at center, #2b0d00 0%, #110500 40%, #000 100%);
+            background: radial-gradient(circle at center, #2b0d00 0%, #0d0400 50%, #000 100%);
             font-family: 'VT323', monospace; color: var(--orange); overflow: hidden;
         }
 
-        /* CRT Overlays */
+        /* CRT Effects */
         .overlay-scan {
             position: fixed; inset: 0; pointer-events: none; z-index: 1000;
-            background: repeating-linear-gradient(to bottom, rgba(255,69,0,0.05) 0px, transparent 2px);
+            background: repeating-linear-gradient(to bottom, var(--scanline) 0px, transparent 2px);
         }
 
-        /* Login Screen */
         #login-screen {
             position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
+
         input {
             background: transparent; border: 1px solid var(--orange); color: var(--orange);
             font-family: 'VT323', monospace; font-size: 24px; padding: 10px; text-align: center;
             outline: none; box-shadow: 0 0 15px var(--orange); margin-top: 20px;
         }
 
-        /* Desktop Container */
         .desktop { position: relative; width: 100%; height: 100%; display: none; }
 
         /* Window Styling */
         .win {
-            position: absolute; background: rgba(0,0,0,0.95); border: 1px solid var(--orange);
-            box-shadow: 0 0 25px rgba(255,69,0,0.3); overflow: hidden; z-index: 10;
+            position: absolute; background: rgba(0,0,0,0.94); border: 1px solid var(--orange);
+            box-shadow: 0 0 25px rgba(255,69,0,0.25); overflow: hidden; z-index: 10;
         }
         .win-header {
             background: rgba(255,69,0,0.2); padding: 5px 10px; font-size: 14px;
@@ -51,22 +50,27 @@
         }
         .win-body { padding: 10px; }
 
-        /* Infection Popups Styling */
-        .popup-variant-red { border: 2px solid var(--red) !important; box-shadow: 0 0 30px var(--red) !important; }
-        .popup-variant-red .win-header { background: rgba(255,0,0,0.4) !important; }
-
-        /* Glitch & Shake */
-        .stage3-shake { animation: globalShake 0.15s infinite; }
-        @keyframes globalShake {
-            0% { transform: translate(0,0); }
-            25% { transform: translate(2px,-2px); }
-            50% { transform: translate(-3px,1px); }
-            100% { transform: translate(0,0); }
+        /* Camera Feed Styling */
+        #cam-feed {
+            width: 100%; height: 180px; background: #050505; position: relative;
+            overflow: hidden; border: 1px solid #222;
         }
+        .cam-glitch { animation: camNoise 0.2s infinite; opacity: 0.3; background: url('https://media.giphy.com/media/oEI9uWUic8pY4/giphy.gif'); background-size: cover; position: absolute; inset: 0; }
+        .cam-text { position: absolute; top: 5px; left: 5px; font-size: 12px; color: #fff; text-shadow: 1px 1px #000; }
 
-        /* Typing Log */
-        #hacker-log { color: var(--green); height: 120px; overflow: hidden; font-size: 14px; }
-        
+        /* Popups */
+        .popup-variant-red { border: 2px solid var(--red) !important; box-shadow: 0 0 40px var(--red) !important; }
+        .popup-variant-red .win-header { background: rgba(255,0,0,0.5) !important; }
+
+        /* Shake & Glitch */
+        .stage3-shake { animation: globalShake 0.1s infinite; }
+        @keyframes globalShake {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-2px, -1px); }
+            100% { transform: translate(1px, 1px); }
+        }
+        @keyframes camNoise { 0% { opacity: 0.1; } 50% { opacity: 0.2; } 100% { opacity: 0.1; } }
+
         .footer {
             position: fixed; bottom: 0; width: 100%; padding: 5px 20px;
             background: rgba(0,0,0,0.9); border-top: 1px solid var(--orange);
@@ -77,29 +81,38 @@
 <body>
 
 <div id="login-screen">
-    <h1 style="font-size: 50px; letter-spacing: 10px; color: var(--red);">[ AFR.OS // CORE ]</h1>
-    <input type="password" id="passInput" placeholder="KEY_REQUIRED" autofocus>
+    <h1 style="font-size: 50px; letter-spacing: 12px; color: var(--red);">[ AFR.OS // CORE ]</h1>
+    <input type="password" id="passInput" placeholder="ENTER_CODE" autofocus>
 </div>
 
 <div class="overlay-scan"></div>
 
 <div class="desktop" id="main-desktop">
-    <div class="win" id="w-tracker" style="top: 10%; left: 30%; width: 400px;">
-        <div class="win-header">ANSH_FED_ORG // SATELLITE_UPLINK</div>
+    <div class="win" id="w-cam" style="top: 20px; left: 20px; width: 320px;">
+        <div class="win-header">LIVE_SURVEILLANCE // NODE_UAE</div>
         <div class="win-body">
-            <div id="target-name" style="color: var(--amber);">SCANNING ASSETS...</div>
-            <div id="hacker-log"></div>
+            <div id="cam-feed">
+                <div class="cam-glitch"></div>
+                <div class="cam-text">REC ● CAM_01<br>LOC: SECTOR_7<br>AFR_FED_ORG</div>
+            </div>
         </div>
     </div>
 
-    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 300px; height: 80vh;">
-        <div class="win-header">WHITELISTED_PERSONNEL</div>
-        <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 70vh; color: var(--green);"></div>
+    <div class="win" id="w-log" style="bottom: 80px; left: 20px; width: 450px;">
+        <div class="win-header">ANSH_FED_ORG // HACKER_TERMINAL</div>
+        <div class="win-body">
+            <div id="hacker-log" style="color: var(--green); height: 150px; overflow: hidden; font-size: 14px; font-family: monospace;"></div>
+        </div>
+    </div>
+
+    <div class="win" id="w-assets" style="top: 20px; right: 20px; width: 300px; height: 85vh;">
+        <div class="win-header">ASSET_WHITELIST</div>
+        <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 75vh; color: var(--amber);"></div>
     </div>
 </div>
 
 <div class="footer">
-    <span>SYSTEM: AFR.OS // STATUS: INFECTED</span>
+    <span>SYSTEM: AFR.OS // AUTH: ANSHUXXX // THREAT: CRITICAL</span>
     <span id="sys-time">TIME: 00:00:00</span>
 </div>
 
@@ -107,71 +120,76 @@
     const pass = "A$N#H";
     const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
 
-    const popupTitles = ["ANSH_FED_ORG // WARNING", "FBI // TRACE_DETECTED", "AFR.OS // KERNEL_BREACH", "SATELLITE // LOST_LINK", "ACCESS // DENIED"];
-    const popupMsgs = ["Unauthorized access to UAE_NODE_09", "Tracing IP: 192.168.1.1...", "Asset relocation in progress", "Federal Encryption bypassed", "Alert: AFR_ORG system override"];
+    const popData = [
+        {t: "FBI // ALERT", m: "System Breach in Progress..."},
+        {t: "AFR.OS // KERNEL", m: "Overriding local security protocols."},
+        {t: "ANSH_FED // TRACE", m: "Tracing asset: " + classmates[Math.floor(Math.random()*classmates.length)]},
+        {t: "ERROR_404", m: "Diplomacy.OS has been deleted."}
+    ];
 
     document.getElementById('passInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && this.value === pass) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('main-desktop').style.display = 'block';
-            initSystem();
+            initOS();
         }
     });
 
-    function initSystem() {
+    function initOS() {
         const list = document.getElementById('personnel-list');
         classmates.forEach(name => { list.innerHTML += `> ${name}<br>`; });
-        startLog();
-        startTime();
+        
+        document.querySelectorAll('.win').forEach(makeDraggable);
+        
+        setInterval(updateLog, 1200);
+        setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
+        
         scheduleInfection();
     }
 
-    // Logic to spawn random variant dialog boxes
-    function spawnPopup() {
-        const desktop = document.getElementById('main-desktop');
+    function updateLog() {
+        const log = document.getElementById('hacker-log');
+        const cmds = ["PKT_INJECT", "SSH_BYPASS", "SATELLITE_LINK", "SQL_DUMP", "MEM_SCAN"];
+        log.innerHTML += `[${new Date().toLocaleTimeString()}] ${cmds[Math.floor(Math.random()*cmds.length)]}: OK (0x${Math.random().toString(16).substr(2,4)})<br>`;
+        if (log.innerHTML.split('<br>').length > 10) log.innerHTML = log.innerHTML.split('<br>').slice(1).join('<br>');
+    }
+
+    function spawnInfection() {
+        const desk = document.getElementById('main-desktop');
         const win = document.createElement('div');
+        const data = popData[Math.floor(Math.random()*popData.length)];
         win.className = 'win ' + (Math.random() > 0.5 ? 'popup-variant-red' : '');
-        
-        const x = Math.random() * 60 + 10;
-        const y = Math.random() * 50 + 10;
-        win.style.cssText = `top: ${y}%; left: ${x}%; width: 250px; z-index: 2000;`;
-
-        const title = popupTitles[Math.floor(Math.random() * popupTitles.length)];
-        const msg = popupMsgs[Math.floor(Math.random() * popupMsgs.length)];
-
-        win.innerHTML = `
-            <div class="win-header"><span>${title}</span><span onclick="this.closest('.win').remove()" style="cursor:pointer">X</span></div>
-            <div class="win-body" style="font-size:13px;">${msg}</div>
-        `;
-        desktop.appendChild(win);
-        
-        // Remove popup after a few seconds
-        setTimeout(() => win.remove(), 4000);
+        win.style.cssText = `top: ${Math.random()*60}%; left: ${Math.random()*60}%; width: 220px; z-index: 3000;`;
+        win.innerHTML = `<div class="win-header"><span>${data.t}</span><span onclick="this.closest('.win').remove()" style="cursor:pointer">[X]</span></div><div class="win-body">${data.m}</div>`;
+        desk.appendChild(win);
+        makeDraggable(win);
+        setTimeout(() => win.remove(), 5000);
     }
 
     function scheduleInfection() {
-        const delay = 3000 + Math.random() * 5000;
         setTimeout(() => {
             document.getElementById('main-desktop').classList.add('stage3-shake');
-            spawnPopup();
-            if(Math.random() > 0.7) spawnPopup(); // Chance for double popups
-
+            spawnInfection();
             setTimeout(() => {
                 document.getElementById('main-desktop').classList.remove('stage3-shake');
                 scheduleInfection();
-            }, 300);
-        }, delay);
+            }, 400);
+        }, 4000 + Math.random() * 6000);
     }
 
-    function startLog() {
-        const log = document.getElementById('hacker-log');
-        setInterval(() => {
-            log.innerHTML += `[AFR_SYS]: ${Math.random().toString(16).substr(2, 8)} intercepted...<br>`;
-            if (log.children.length > 8) log.innerHTML = log.innerHTML.split('<br>').slice(1).join('<br>');
-        }, 1500);
+    function makeDraggable(elmnt) {
+        let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+        const head = elmnt.querySelector(".win-header");
+        head.onmousedown = (e) => {
+            p3 = e.clientX; p4 = e.clientY;
+            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+            document.onmousemove = (e) => {
+                p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - p2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - p1) + "px";
+            };
+        };
     }
-
-    function startTime() { setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000); }
 </script>
 </body>
 </html>
