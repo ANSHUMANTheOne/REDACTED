@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ANSHUMAN FEDERAL RESEARCH // CLASSIFIED</title>
+    <title>ANSHUMAN FEDERAL RESEARCH // ADMIN_ACCESS</title>
     <style>
         body {
             background-color: #050505;
@@ -15,7 +15,6 @@
             height: 100vh;
         }
 
-        /* Scanline Overlay */
         body::before {
             content: " ";
             display: block;
@@ -23,8 +22,43 @@
             top: 0; left: 0; bottom: 0; right: 0;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
             background-size: 100% 4px;
-            z-index: 10;
+            z-index: 100;
             pointer-events: none;
+        }
+
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ff0000;
+        }
+
+        input {
+            background: transparent;
+            border: 1px solid #ff4500;
+            color: #ff4500;
+            padding: 10px;
+            text-align: center;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            margin-top: 20px;
+            width: 250px;
+        }
+
+        #boot-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            color: #00ff41;
+            z-index: 1000;
+            padding: 50px;
+            font-size: 14px;
+            display: none;
         }
 
         .window {
@@ -33,8 +67,9 @@
             background: rgba(0, 0, 0, 0.9);
             box-shadow: 0 0 15px rgba(255, 69, 0, 0.2);
             padding: 12px;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
+            display: none;
         }
 
         .header {
@@ -45,72 +80,113 @@
             text-transform: uppercase;
         }
 
-        /* Windows positions */
-        #main-system { top: 5%; left: 5%; width: 300px; }
-        #whitelist { top: 5%; right: 5%; width: 280px; color: #00ff41; border-color: #00ff41; }
-        #tracker { bottom: 10%; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; border-color: #ff0000; color: #ff0000; }
+        #main-system { top: 5%; left: 5%; width: 280px; }
+        #whitelist { top: 5%; right: 5%; width: 320px; color: #00ff41; border-color: #00ff41; height: 80vh; overflow-y: hidden; }
+        #tracker { bottom: 5%; left: 5%; width: 350px; border-color: #ff0000; color: #ff0000; }
+        #bg-process { bottom: 5%; right: 5%; width: 300px; color: #ffaa00; border-color: #ffaa00; }
 
-        .success { color: white; background: #00ff41; padding: 0 5px; }
-        .tracking-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+        .success { color: white; background: #00ff41; padding: 0 5px; font-weight: bold; }
+        .redacted { background: #ff4500; color: #ff4500; }
     </style>
 </head>
 <body>
 
+    <div id="login-screen">
+        <h1>[ SECURITY CLEARANCE REQUIRED ]</h1>
+        <p>ENTER ADMIN ACCESS KEY</p>
+        <input type="password" id="passInput" placeholder="PASSWORD" autofocus>
+    </div>
+
+    <div id="boot-screen">
+        <div id="boot-text"></div>
+    </div>
+
     <div class="window" id="main-system">
         <div class="header">SYSTEM://AFR_CORE</div>
-        ORGANIZATION: ANSHUMAN FEDERAL RESEARCH<br>
-        SECURE NODE: UAE_01<br>
-        STATUS: ENCRYPTED<br>
+        ADMIN: <span class="redacted">AnshXXXX</span><br>
+        RANK: SUPREME_DIRECTOR<br>
+        STATUS: <span class="success">ONLINE</span><br>
         --------------------------<br>
-        > INITIALIZING GHOST_PROTOCOL...
+        > KEYLOGGER: ACTIVE<br>
+        > STEALTH_MODE: ON
     </div>
 
     <div class="window" id="whitelist">
         <div class="header">WHITELISTED_PERSONNEL</div>
-        - SAPTARSHEE SARKAR<br>
-        - SAQIB ALI<br>
-        - SARTHAK VIRALBHAI SHAH<br>
-        - SAYYID ABDULLAH<br>
-        - SHINE SHYJU<br>
-        - SHIVAM PRATEEK<br>
-        - ZAEEM
+        - MOKSH PRASHANTKUMAR SUTHAR<br>- MOOSA KHAN<br>- NAVANEETH PAYYADAKKATH<br>
+        - PAYAS KULHARI<br>- RAYAN NIBU<br>- SAI TEJ SIDDHARTH AKULA<br>
+        - SANJIT SURESH KUMAR<br>- ABHIRAM ERAYANKOTTU PANAYANTHATTA<br>
+        - ADHISH JACOB ANIL<br>- ADIL ASLAM ALI CHILWAN<br>
+        - ADITYA KARAN HARCHAND<br>- AROMAL AYYAPPAN SAMBAJI<br>
+        - ARYAN MANDE<br>- HARIHARA GOMATHINATHAN<br>
+        - ISHAN S. R. K. BEHERA<br>- ISIT S. R. K. BEHERA<br>
+        - JONATHAN RAJ<br>- MOHAMMED IYAD ISMAIL KHAN<br>
+        - MOHAMMED RAYHAN<br>- MOHAMMED RAYYAN KHAN<br>
+        - SAPTARSHEE SARKAR<br>- SAQIB ALI<br>- SARTHAK V. SHAH<br>
+        - SAYYID ABDULLAH<br>- SHINE SHYJU<br>- SHIVAM PRATEEK<br>- ZAEEM
     </div>
 
     <div class="window" id="tracker">
-        <div class="header">LIVE_IP_TRACKER_V4.2</div>
-        <div id="status-line">SCANNING NETWORK...</div>
-        <div class="tracking-text" id="target-output">INITIATING TRACE...</div>
+        <div class="header">LIVE_IP_TRACKER_V5.0</div>
+        <div id="status-line">SCANNING CLASSMATE NETWORK...</div>
+        <div id="target-output">INITIATING...</div>
         <div id="ip-output">0.0.0.0</div>
     </div>
 
+    <div class="window" id="bg-process">
+        <div class="header">ADMIN_MONITOR</div>
+        [OK] PACKET_SNIFFER: RUNNING<br>
+        [OK] KEYLOG_FEED: REDIRECTED TO ADMIN<br>
+        --------------------------<br>
+        <div id="log-feed">monitoring nodes...</div>
+    </div>
+
     <script>
-        const classmates = [
-            "SAPTARSHEE SARKAR", "SAQIB ALI", "SARTHAK VIRALBHAI SHAH", 
-            "SAYYID ABDULLAH", "SHINE SHYJU", "SHIVAM PRATEEK", "ZAEEM"
-        ];
+        const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM ERAYANKOTTU PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN"];
+        const correctPass = "A$N#H";
 
-        function startTracking() {
-            const statusLine = document.getElementById('status-line');
-            const targetOutput = document.getElementById('target-output');
-            const ipOutput = document.getElementById('ip-output');
+        const passInput = document.getElementById('passInput');
+        passInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                if (passInput.value === correctPass) {
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('boot-screen').style.display = 'block';
+                    typeBoot();
+                } else {
+                    alert("UNAUTHORIZED ACCESS ATTEMPT REJECTED.");
+                    passInput.value = "";
+                }
+            }
+        });
 
+        const bootLines = ["LOADING ADMIN_PROTOCOL...", "ACCESSING ANSHUMAN_FEDERAL_RESEARCH...", "USER: AnshXXXX IDENTIFIED.", "PERMISSION_LEVEL: SUPREME.", "INITIALIZING TRACKER..."];
+        let lineIdx = 0;
+        function typeBoot() {
+            if (lineIdx < bootLines.length) {
+                document.getElementById('boot-text').innerHTML += bootLines[lineIdx] + "<br>";
+                lineIdx++;
+                setTimeout(typeBoot, 500);
+            } else {
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                    document.querySelectorAll('.window').forEach(w => w.style.display = 'block');
+                    runSystem();
+                }, 800);
+            }
+        }
+
+        function runSystem() {
             setInterval(() => {
-                // Generate fake IP
                 const fakeIp = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 255)}`;
                 const randomName = classmates[Math.floor(Math.random() * classmates.length)];
-
-                statusLine.innerHTML = "SIGNAL INTERCEPTED...";
-                ipOutput.innerHTML = `TARGET_IP: ${fakeIp}`;
-                targetOutput.innerHTML = `LOCATING: ${randomName}...`;
-
-                // Randomly show "Success"
+                document.getElementById('status-line').innerHTML = "INTERCEPTING DATA...";
+                document.getElementById('ip-output').innerHTML = `IP_ADDR: ${fakeIp}`;
+                document.getElementById('target-output').innerHTML = `LOCATING: ${randomName}`;
                 if(Math.random() > 0.7) {
-                    targetOutput.innerHTML = `<span class="success">TRACKING SUCCESSFUL: ${randomName}</span>`;
+                    document.getElementById('target-output').innerHTML = `<span class="success">ADMIN ACCESS: ${randomName} LOCATED</span>`;
                 }
             }, 2000);
         }
-
-        window.onload = startTracking;
     </script>
 </body>
 </html>
