@@ -2,44 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFR.OS // BUS_45_GATEWAY_V4</title>
+    <title>AFR.OS // BUS_45_GATEWAY</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root { --green: #00ff41; --amber: #ffcc66; }
         body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
+        
+        /* LAYOUT */
         .container { display: flex; height: 100vh; padding: 15px; box-sizing: border-box; gap: 15px; }
-        .scanner-box { flex: 1.4; border: 1px solid var(--green); position: relative; background: #050505; display: flex; align-items: center; justify-content: center; }
-        #video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; }
+        
+        /* VIDEO AREA - FIXED MIRROR & ZOOM */
+        .scanner-box { 
+            flex: 1.4; border: 1px solid var(--green); position: relative; 
+            background: #050505; display: flex; align-items: center; justify-content: center;
+        }
+        #video { 
+            width: 100%; height: 100%; 
+            object-fit: contain; /* FIXED: No more zooming */
+            transform: scaleX(-1); /* FIXED: Mirrored correctly */
+        }
+        canvas { 
+            position: absolute; 
+            transform: scaleX(-1); /* FIXED: Box follows face correctly */
+            pointer-events: none; 
+        }
+
+        /* SIDEBAR LOGS */
         .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .panel { border: 1px solid var(--green); padding: 12px; background: rgba(0, 255, 65, 0.02); }
         .log-container { height: 150px; overflow-y: auto; font-size: 14px; border-top: 1px solid #222; margin-top: 5px; }
-        #status-bar { position: absolute; bottom: 0; left: 0; padding: 8px; background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; }
-        #boot-overlay { position: fixed; inset: 0; background: black; z-index: 9999; display: flex; justify-content: center; align-items: center; }
-        button { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 20px; font-family: 'VT323'; cursor: pointer; }
+        
+        #status-bar { 
+            position: absolute; bottom: 0; left: 0; padding: 8px; 
+            background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; 
+        }
+        
+        #boot-overlay { 
+            position: fixed; inset: 0; background: black; z-index: 9999; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        button { 
+            background: transparent; border: 2px solid var(--green); color: var(--green); 
+            padding: 20px 40px; font-family: 'VT323'; font-size: 24px; cursor: pointer; 
+            box-shadow: 0 0 10px var(--green);
+        }
     </style>
 </head>
 <body>
 
 <div id="boot-overlay">
-    <button onclick="bootSequence()">[ INITIALIZE_BUS_45_HARDWARE ]</button>
+    <button onclick="bootSequence()">[ INITIALIZE_BUS_45_GATEWAY ]</button>
 </div>
 
 <div class="container">
     <div class="scanner-box" id="cam-container">
         <video id="video" autoplay muted playsinline></video>
-        <div id="status-bar">STATUS: STANDBY</div>
+        <div id="status-bar">STATUS: STANDBY...</div>
     </div>
+
     <div class="sidebar">
         <div class="panel">
             <h3 style="margin:0; color: var(--amber);">[ ATTENDANCE_LOG // BUS_45 ]</h3>
-            <div id="attendance-log" class="log-container">> AWAITING AUTH...</div>
+            <div id="attendance-log" class="log-container">> AWAITING BIOMETRIC_MATCH...</div>
         </div>
+
         <div class="panel">
             <h3 style="margin:0; color: var(--green);">[ REALTIME_EMOTION_SCAN ]</h3>
-            <div id="emotion-log" class="log-container">> MONITORING...</div>
+            <div id="emotion-log" class="log-container">> MONITORING_STREAMS...</div>
         </div>
-        <div class="panel" style="height: 180px;">
+
+        <div class="panel" style="height: 200px;">
             <canvas id="emotionChart"></canvas>
         </div>
     </div>
@@ -58,9 +90,13 @@
         document.getElementById('boot-overlay').style.display = 'none';
         const status = document.getElementById('status-bar');
         
+        // STEP 1: Start camera immediately so user sees something
+        await startCamera();
+
         try {
-            status.innerText = "LOADING AI MODELS...";
+            status.innerText = "SYSTEM: LOADING_AI_MODELS...";
             const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+            
             await Promise.all([
                 faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -68,15 +104,31 @@
                 faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
             ]);
 
-            status.innerText = "ENCODING BIOMETRIC DATA...";
+            status.innerText = "SYSTEM: ENCODING_PNG_RESOURCES...";
             faceMatcher = await createMatcher();
             
             initChart();
-            startCamera(); // Camera starts AFTER models load
+            status.innerText = "SYSTEM_ACTIVE // SCANNING_BUS_45";
+            
+            // Start the detection loop
+            runDetectionLoop();
+
         } catch (e) {
-            status.innerText = "EMERGENCY_START: CAMERA_ONLY_MODE";
+            status.innerText = "CRITICAL_ERROR: AI_OFFLINE // CAMERA_ONLY_MODE";
             console.error(e);
-            startCamera(); // Start camera anyway if AI fails
+        }
+    }
+
+    async function startCamera() {
+        const video = document.getElementById('video');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 } 
+            });
+            video.srcObject = stream;
+            return new Promise(resolve => video.onloadedmetadata = resolve);
+        } catch (err) {
+            document.getElementById('status-bar').innerText = "FATAL_ERROR: CAMERA_ACCESS_DENIED";
         }
     }
 
@@ -84,71 +136,94 @@
         const descriptors = [];
         for (const label of authorized) {
             try {
+                // Fetch from current folder
                 const img = await faceapi.fetchImage(`./${label}.png`);
                 const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                if (det) descriptors.push(new faceapi.LabeledFaceDescriptors(label, [det.descriptor]));
-            } catch (e) { console.warn(`Skipped ${label}`); }
+                if (det) {
+                    descriptors.push(new faceapi.LabeledFaceDescriptors(label, [det.descriptor]));
+                    console.log(`Encoded: ${label}`);
+                }
+            } catch (e) { 
+                console.warn(`Could not load ${label}.png - Skipping.`);
+            }
         }
         return descriptors.length > 0 ? new faceapi.FaceMatcher(descriptors, 0.6) : null;
     }
 
-    function startCamera() {
+    function runDetectionLoop() {
         const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-            video.srcObject = stream;
-            video.onplay = () => {
-                const canvas = faceapi.createCanvasFromMedia(video);
-                document.getElementById('cam-container').append(canvas);
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                faceapi.matchDimensions(canvas, displaySize);
+        const canvas = faceapi.createCanvasFromMedia(video);
+        document.getElementById('cam-container').append(canvas);
+        
+        const displaySize = { width: video.clientWidth, height: video.clientHeight };
+        faceapi.matchDimensions(canvas, displaySize);
 
-                setInterval(async () => {
-                    const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
-                    const resized = faceapi.resizeResults(detections, displaySize);
-                    
-                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-                    faceapi.draw.drawDetections(canvas, resized);
+        // --- 2 SECOND INTERVAL AS REQUESTED ---
+        setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(video)
+                .withFaceLandmarks()
+                .withFaceExpressions()
+                .withFaceDescriptors();
+            
+            const resized = faceapi.resizeResults(detections, displaySize);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw boxes and emotions on camera
+            faceapi.draw.drawDetections(canvas, resized);
+            faceapi.draw.drawFaceExpressions(canvas, resized);
 
-                    resized.forEach(d => {
-                        const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                        let name = "UNKNOWN";
-                        
-                        if (faceMatcher) {
-                            const match = faceMatcher.findBestMatch(d.descriptor);
-                            name = match.label;
-                        }
-                        
-                        updateLogs(name, emotion);
-                    });
-                }, 2000); // 2-second scan interval
-                document.getElementById('status-bar').innerText = "SYSTEM_ACTIVE // BUS_45";
-            };
-        }).catch(() => {
-            document.getElementById('status-bar').innerText = "ERROR: CAMERA_HARDWARE_NOT_FOUND";
-        });
+            resized.forEach(d => {
+                const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+                let name = "UNKNOWN_GUEST";
+                
+                if (faceMatcher) {
+                    const match = faceMatcher.findBestMatch(d.descriptor);
+                    name = match.label;
+                }
+                
+                updateDualLogs(name, emotion);
+            });
+        }, 2000); 
     }
 
-    function updateLogs(name, emotion) {
+    function updateDualLogs(name, emotion) {
         const time = new Date().toLocaleTimeString();
         const emoLog = document.getElementById('emotion-log');
+        
+        // 1. Real-time Emotion Log (Every 2s)
         emoLog.innerHTML = `<div>> [${time}] ${name.toUpperCase()}: ${emotion.toUpperCase()}</div>` + emoLog.innerHTML;
 
-        if (name !== 'unknown' && name !== 'UNKNOWN' && !attendanceSet.has(name)) {
+        // 2. Attendance Log (Unique per person)
+        if (name !== 'unknown' && name !== 'UNKNOWN_GUEST' && !attendanceSet.has(name)) {
             attendanceSet.add(name);
             const attLog = document.getElementById('attendance-log');
             attLog.innerHTML = `<div style="color:var(--amber)">> [${time}] ${name.toUpperCase()}: LOGGED_BUS_45</div>` + attLog.innerHTML;
         }
 
+        // 3. Update Chart
         const key = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        if(emotionCounts[key] !== undefined) { emotionCounts[key]++; chart.update(); }
+        if(emotionCounts[key] !== undefined) {
+            emotionCounts[key]++;
+            chart.update();
+        }
     }
 
     function initChart() {
         const ctx = document.getElementById('emotionChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'bar',
-            data: { labels: Object.keys(emotionCounts), datasets: [{ data: Object.values(emotionCounts), backgroundColor: '#00ff41' }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: '#00ff41' } }, x: { ticks: { color: '#00ff41' } } }, plugins: { legend: { display: false } } }
+            data: { 
+                labels: Object.keys(emotionCounts), 
+                datasets: [{ data: Object.values(emotionCounts), backgroundColor: '#00ff41' }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    y: { ticks: { color: '#00ff41' }, grid: { color: '#111' } },
+                    x: { ticks: { color: '#00ff41' } }
+                },
+                plugins: { legend: { display: false } }
+            }
         });
     }
 </script>
