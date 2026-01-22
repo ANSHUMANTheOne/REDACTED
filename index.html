@@ -38,6 +38,12 @@
 
         .desktop { position: relative; width: 100%; height: 100%; display: none; }
 
+        /* Guest Sandbox Space */
+        #guest-space {
+            position: fixed; inset: 0; background: #050505; display: none; 
+            padding: 40px; color: var(--green); overflow-y: auto; z-index: 2000;
+        }
+
         /* Window System */
         .win {
             position: absolute; background: rgba(0,0,0,0.96); border: 1px solid var(--orange);
@@ -49,14 +55,12 @@
         }
         .win-body { padding: 12px; }
 
-        /* Security Alert Overlay */
         #security-alert {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: var(--red); color: white; padding: 30px; z-index: 10000;
             font-size: 32px; border: 4px solid white; text-align: center; font-weight: bold;
         }
 
-        /* Fixed Surveillance Visual (CSS Based to avoid "Content Not Available") */
         #surveillance-visual {
             width: 100%; height: 180px; background: #000; position: relative; overflow: hidden;
             background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
@@ -68,7 +72,6 @@
         }
         @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
 
-        /* Satellite Tracker Dot */
         #map-area {
             width: 100%; height: 220px; background: #050505; position: relative; border: 1px solid #331100;
             background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
@@ -92,7 +95,8 @@
 
 <div id="login-screen">
     <h1 style="font-size: 50px; letter-spacing: 15px; color: var(--red);">[ AFR.OS // CORE ]</h1>
-    <input type="password" id="passInput" placeholder="SYSTEM_KEY" autofocus>
+    <input type="password" id="passInput" placeholder="ENTER ACCESS KEY" autofocus>
+    <p style="color: #444; margin-top: 15px; font-size: 14px;">GUEST_ACCESS_OR_ADMIN_OVERRIDE_REQUIRED</p>
 </div>
 
 <div class="overlay-scan"></div>
@@ -133,15 +137,6 @@
         </div>
     </div>
 
-    <div class="win" id="w-core" style="top: 20px; left: 400px; width: 280px; visibility: hidden;" id="v-core">
-        <div class="win-header">SYSTEM://AFR_CORE</div>
-        <div class="win-body" style="font-size:12px;">
-            STATUS: <span style="color:var(--green)">ONLINE</span><br>
-            UPTIME: 00:14:08<br>
-            SECURITY: ARMORED
-        </div>
-    </div>
-
     <div class="win" id="w-log" style="bottom: 70px; left: 20px; width: 450px;">
         <div class="win-header">ANSH_FED_ORG // HACKER_TERMINAL</div>
         <div class="win-body">
@@ -156,13 +151,23 @@
 
 </div>
 
+<div id="guest-space">
+    <h1 style="border-bottom: 2px solid var(--green); padding-bottom: 10px;">[ GUEST_SANDBOX_STATION ]</h1>
+    <p>> Logged in as: GUEST_USER</p>
+    <p>> Status: ISOLATED_ENVIRONMENT</p>
+    <p>> Message: You can insert your secondary code or data within this container.</p>
+    <div id="secondary-content-area" style="margin-top: 30px;">
+        </div>
+</div>
+
 <div class="footer">
-    <span>SYSTEM: AFR.OS // AUTH: ADMIN_ANSHU // THREAT: CRITICAL</span>
+    <span>SYSTEM: AFR.OS // AUTH: <span id="auth-display">PENDING</span> // STATUS: ARMORED</span>
     <span id="sys-time">TIME: 00:00:00</span>
 </div>
 
 <script>
-    const pass = "A$N#H";
+    const adminPass = "A$N#H";
+    const guestPass = "guest";
     const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
 
     function triggerLockout() {
@@ -177,10 +182,22 @@
     });
 
     document.getElementById('passInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && this.value === pass) {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-desktop').style.display = 'block';
-            startOS();
+        if (e.key === 'Enter') {
+            if (this.value === adminPass) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-desktop').style.display = 'block';
+                document.getElementById('auth-display').innerText = "ADMIN_ANSHU";
+                startOS();
+            } else if (this.value === guestPass) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('guest-space').style.display = 'block';
+                document.getElementById('auth-display').innerText = "GUEST_USER";
+                // System time still runs in guest mode
+                setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
+            } else {
+                this.value = "";
+                this.placeholder = "INVALID_KEY";
+            }
         }
     });
 
@@ -197,7 +214,7 @@
         const name = classmates[Math.floor(Math.random() * classmates.length)];
         document.getElementById('target-name').innerText = name;
         document.getElementById('target-ip').innerText = `163.66.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-        document.getElementById('target-coords').innerText = `${(Math.random()*90).toFixed(4)}° N, ${(Math.random()*180).toFixed(4)}° E`;
+        document.getElementById('target-coords').innerText = `${(24 + Math.random()*2).toFixed(4)}° N, ${(54 + Math.random()*2).toFixed(4)}° E`;
         const dot = document.getElementById('target-dot');
         dot.style.left = Math.random() * 90 + "%";
         dot.style.top = Math.random() * 80 + "%";
