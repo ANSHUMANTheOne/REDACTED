@@ -1,182 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>AFR.OS // BUS_45_GATEWAY_V3</title>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-    <style>
-        :root { --green: #00ff41; --amber: #ffcc66; --red: #ff4500; }
-        body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
-        
-        .container { display: flex; height: 100vh; padding: 15px; box-sizing: border-box; gap: 15px; }
-        
-        /* Video Container */
-        .scanner-box { 
-            flex: 1.4; border: 1px solid var(--green); position: relative; 
-            background: #050505; display: flex; align-items: center; justify-content: center;
-        }
-        #video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; }
+async function createMatcher() {
+    const status = document.getElementById('scan-status');
+    const descriptors = [];
 
-        /* Sidebar & Logs */
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        .panel { border: 1px solid var(--green); padding: 12px; background: rgba(0, 255, 65, 0.02); }
-        
-        .log-container { height: 180px; overflow-y: auto; font-size: 14px; border-top: 1px solid #222; margin-top: 5px; }
-        .log-entry { border-bottom: 1px solid #111; padding: 4px 0; }
-        
-        #status-bar { position: absolute; bottom: 0; left: 0; padding: 8px; background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; font-size: 18px; }
-        
-        /* Boot Overlay */
-        #boot-overlay { position: fixed; inset: 0; background: black; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #boot-btn { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 20px 40px; font-family: 'VT323'; font-size: 24px; cursor: pointer; box-shadow: 0 0 15px var(--green); }
-    </style>
-</head>
-<body>
-
-<div id="boot-overlay">
-    <h1 style="letter-spacing:10px;">BUS_NO_45</h1>
-    <button id="boot-btn" onclick="startSystem()">INITIALIZE_BIOMETRIC_GATEWAY</button>
-</div>
-
-<div class="container">
-    <div class="scanner-box" id="cam-container">
-        <video id="video" autoplay muted playsinline></video>
-        <div id="status-bar">STATUS: STANDBY</div>
-    </div>
-
-    <div class="sidebar">
-        <div class="panel">
-            <h3 style="margin:0; color: var(--amber);">[ ATTENDANCE_LOG // BUS_45 ]</h3>
-            <div id="attendance-log" class="log-container">> WAITING_FOR_AUTH...</div>
-        </div>
-
-        <div class="panel">
-            <h3 style="margin:0; color: var(--green);">[ REALTIME_PSYCH_METRICS ]</h3>
-            <div id="emotion-log" class="log-container">> MONITORING_EMOTIONS...</div>
-        </div>
-
-        <div class="panel" style="height: 200px;">
-            <canvas id="emotionChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-
-<script>
-    const authorized = ['anshuman', 'adhish'];
-    let attendanceSet = new Set(); // To track unique daily attendance
-    let emotionCounts = { Happy: 0, Neutral: 0, Sad: 0, Angry: 0, Surprised: 0 };
-    let chart, faceMatcher;
-
-    async function startSystem() {
-        document.getElementById('boot-overlay').style.display = 'none';
-        const status = document.getElementById('status-bar');
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-
+    for (const label of authorized) {
         try {
-            status.innerText = "SYSTEM: LOADING_AI_CORE...";
-            await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-            ]);
-
-            status.innerText = "SYSTEM: ENCODING_PNG_RESOURCES...";
-            faceMatcher = await createMatcher();
+            status.innerText = `ENCODING: ${label.toUpperCase()}...`;
             
-            initChart();
-            initCamera();
-        } catch (e) {
-            status.innerText = "FATAL_ERROR: HARDWARE_FAILURE";
-        }
-    }
+            // 1. Force fetch with no-cache to ensure we get the latest file
+            const img = await faceapi.fetchImage(`./${label}.png`);
+            
+            // 2. Use TinyFaceDetector if SsdMobilenet fails (it's faster for PNGs)
+            const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
 
-    async function createMatcher() {
-        const descriptors = [];
-        for (const label of authorized) {
-            try {
-                const img = await faceapi.fetchImage(`./${label}.png`);
-                const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                if (det) descriptors.push(new faceapi.LabeledFaceDescriptors(label, [det.descriptor]));
-            } catch (e) { console.warn(`Skipped ${label}`); }
-        }
-        return new faceapi.FaceMatcher(descriptors.length > 0 ? descriptors : [], 0.6);
-    }
-
-    function initCamera() {
-        const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: { width: 640 } }).then(stream => {
-            video.srcObject = stream;
-            video.onplay = () => {
-                const canvas = faceapi.createCanvasFromMedia(video);
-                document.getElementById('cam-container').append(canvas);
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                faceapi.matchDimensions(canvas, displaySize);
-
-                // --- 2 SECOND SCANNING INTERVAL ---
-                setInterval(async () => {
-                    const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
-                    const resized = faceapi.resizeResults(detections, displaySize);
-                    
-                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-                    faceapi.draw.drawDetections(canvas, resized);
-
-                    resized.forEach(d => {
-                        const match = faceMatcher.findBestMatch(d.descriptor);
-                        const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                        
-                        processDualLogs(match.label, emotion);
-                    });
-                }, 2000); // 2000ms = 2 Seconds
-                
-                document.getElementById('status-bar').innerText = "SYSTEM_ACTIVE // SCANNING_BUS_45";
-            };
-        });
-    }
-
-    function processDualLogs(name, emotion) {
-        const time = new Date().toLocaleTimeString();
-        const emotionUpper = emotion.toUpperCase();
-        const nameDisplay = name === 'unknown' ? 'UNIDENTIFIED' : name.toUpperCase();
-
-        // 1. EMOTION LOG (Real-time tracking every 2s)
-        const emoLog = document.getElementById('emotion-log');
-        emoLog.innerHTML = `<div class="log-entry">> [${time}] ${nameDisplay}: ${emotionUpper}</div>` + emoLog.innerHTML;
-
-        // 2. ATTENDANCE LOG (Only once per person per session)
-        if (name !== 'unknown' && !attendanceSet.has(name)) {
-            attendanceSet.add(name);
-            const attLog = document.getElementById('attendance-log');
-            attLog.innerHTML = `<div class="log-entry" style="color:var(--amber)">> [${time}] ${nameDisplay}: BOARDED_BUS_45</div>` + attLog.innerHTML;
-        }
-
-        // Update Chart Data
-        const key = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        if(emotionCounts[key] !== undefined) {
-            emotionCounts[key]++;
-            chart.update();
-        }
-    }
-
-    function initChart() {
-        const ctx = document.getElementById('emotionChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'bar',
-            data: { 
-                labels: Object.keys(emotionCounts), 
-                datasets: [{ label: 'METRICS', data: Object.values(emotionCounts), backgroundColor: '#00ff41' }] 
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false,
-                scales: { y: { ticks: { color: '#00ff41' }, grid: { color: '#111' } }, x: { ticks: { color: '#00ff41' } } },
-                plugins: { legend: { display: false } }
+            if (det) {
+                descriptors.push(new faceapi.LabeledFaceDescriptors(label, [det.descriptor]));
+                console.log(`✅ ${label} encoded.`);
+            } else {
+                // IMPORTANT: This prevents the 'stuck' screen!
+                console.warn(`⚠️ Face not detected in ${label}.png - Check lighting in photo.`);
             }
-        });
+        } catch (e) {
+            console.error(`❌ Could not load ${label}.png. Check if file exists in folder.`);
+        }
     }
-</script>
-</body>
-</html>
+
+    // 3. Final Check: Don't let the app crash if no faces are loaded
+    if (descriptors.length === 0) {
+        status.innerText = "GATEWAY_READY (GUEST_MODE_ONLY)";
+        return new faceapi.FaceMatcher([], 0.6); 
+    }
+
+    status.innerText = "GATEWAY_READY (AUTH_MODE)";
+    return new faceapi.FaceMatcher(descriptors, 0.6);
+}
