@@ -2,59 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFR.OS // BIOMETRIC_GATEWAY</title>
+    <title>AFR.OS // BIOMETRIC_GATEWAY_DEBUG</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root { --green: #00ff41; --amber: #ffcc66; --red: #ff0000; }
         body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
+        .container { display: flex; height: 100vh; padding: 20px; box-sizing: border-box; gap: 20px; }
         
-        /* THE BOOT SCREEN OVERLAY */
+        .scanner-box { 
+            flex: 1.5; border: 1px solid var(--green); position: relative; 
+            background: #050505; display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #111; }
+        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; z-index: 5; }
+        
+        /* DEBUG CONSOLE */
+        #debug-log {
+            position: absolute; top: 10px; left: 10px; width: 300px; height: 150px;
+            background: rgba(0,0,0,0.8); border: 1px solid var(--amber);
+            font-size: 12px; color: var(--amber); padding: 5px; overflow-y: auto; z-index: 10;
+        }
+
         #boot-overlay {
             position: fixed; inset: 0; background: black; z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            border: 2px solid var(--green); margin: 10px;
         }
-
-        #boot-btn {
+        button {
             background: transparent; border: 2px solid var(--green); color: var(--green);
-            padding: 20px 40px; font-family: 'VT323'; font-size: 30px; cursor: pointer;
-            box-shadow: 0 0 15px var(--green); transition: 0.3s;
+            padding: 20px 40px; font-family: 'VT323'; font-size: 24px; cursor: pointer;
         }
-        #boot-btn:hover { background: var(--green); color: black; }
-
-        .container { display: flex; height: 100vh; padding: 20px; box-sizing: border-box; gap: 20px; }
-        .scanner-box { 
-            flex: 1.5; border: 1px solid var(--green); position: relative; 
-            background: #050505; display: flex; justify-content: center; align-items: center;
-        }
-        video { width: 100%; height: auto; transform: scaleX(-1); }
-        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; }
-        
-        .sidebar { flex: 1; border: 1px solid var(--green); padding: 20px; }
-        .log { height: 250px; border-top: 1px solid var(--green); overflow-y: auto; font-size: 14px; margin-top: 20px; color: #aaa; }
     </style>
 </head>
 <body>
 
 <div id="boot-overlay">
-    <h1 style="font-size: 50px; letter-spacing: 5px;">[ SYSTEM_OFFLINE ]</h1>
-    <p style="color: var(--amber);">MANUAL_OVERRIDE_REQUIRED_FOR_BIOMETRICS</p>
-    <button id="boot-btn" onclick="initializeSystem()">ACTIVATE_SENSOR_ARRAY</button>
+    <button onclick="startSystem()">[ CLICK_TO_INITIALIZE_HARDWARE ]</button>
 </div>
 
 <div class="container">
     <div class="scanner-box" id="cam-box">
+        <div id="debug-log">SYSTEM_READY...<br></div>
         <video id="video" autoplay muted playsinline></video>
-        <div style="position: absolute; bottom: 0; width: 100%; padding: 10px; background: rgba(0,0,0,0.7);">
-            <div id="status">STATUS: STANDBY</div>
-        </div>
-    </div>
-
-    <div class="sidebar">
-        <h2 style="margin: 0; color: var(--amber);">AFR_OS // BUS_45_GATEWAY</h2>
-        <div style="height: 180px;"><canvas id="emotionChart"></canvas></div>
-        <h3>LOG_OUTPUT</h3>
-        <div id="attendance-list" class="log">> INITIALIZE SENSOR TO BEGIN...</div>
     </div>
 </div>
 
@@ -62,102 +50,76 @@
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
 <script>
-    const authorized = ['anshuman', 'adhish'];
-    let attendanceData = [];
-    let emotionCounts = { Happy: 0, Neutral: 0, Sad: 0, Angry: 0, Surprised: 0 };
-    let chart, faceMatcher;
+    const logEl = document.getElementById('debug-log');
+    function debug(msg) { 
+        logEl.innerHTML += `> ${msg}<br>`; 
+        logEl.scrollTop = logEl.scrollHeight;
+        console.log(msg);
+    }
 
-    async function initializeSystem() {
-        const status = document.getElementById('status');
-        const overlay = document.getElementById('boot-overlay');
-        
-        status.innerText = "STATUS: LOADING_MODELS...";
-        overlay.style.display = "none"; // Hide boot screen
+    async function startSystem() {
+        document.getElementById('boot-overlay').style.display = "none";
+        debug("INIT: Starting models...");
+
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
 
         try {
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
             await Promise.all([
                 faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                 faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
                 faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
             ]);
+            debug("MODELS: Loaded successfully.");
 
-            faceMatcher = await createMatcher();
-            initChart();
+            debug("CAMERA: Requesting access...");
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: { ideal: 640 }, height: { ideal: 480 } } 
+            });
             
-            // FORCING CAMERA REQUEST
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             const video = document.getElementById('video');
             video.srcObject = stream;
 
-            video.onplay = () => {
-                const canvas = faceapi.createCanvasFromMedia(video);
-                document.getElementById('cam-box').append(canvas);
-                const displaySize = { width: video.clientWidth, height: video.clientHeight };
-                faceapi.matchDimensions(canvas, displaySize);
-
-                setInterval(async () => {
-                    const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
-                    const resized = faceapi.resizeResults(detections, displaySize);
-                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-                    
-                    // DRAWING THE BOX
-                    faceapi.draw.drawDetections(canvas, resized);
-                    faceapi.draw.drawFaceExpressions(canvas, resized);
-
-                    resized.forEach(d => {
-                        const match = faceMatcher.findBestMatch(d.descriptor);
-                        if (match.label !== 'unknown') {
-                            const emo = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                            logAccess(match.label, emo);
-                        }
-                    });
-                }, 150);
-                status.innerText = "STATUS: GATEWAY_ACTIVE";
+            // Wait for video to actually start playing
+            video.onloadedmetadata = () => {
+                debug("VIDEO: Metadata loaded.");
+                video.play();
             };
+
+            video.onplay = () => {
+                debug("VIDEO: Stream playing.");
+                setupDetection(video);
+            };
+
         } catch (err) {
-            alert("CAMERA_ACCESS_DENIED: Please click the 'Lock' icon in your URL bar and allow Camera.");
-            console.error(err);
+            debug(`FATAL_ERROR: ${err.message}`);
+            if (window.location.protocol === 'file:') {
+                debug("CRITICAL: Browsers block AI models on local files. Use CodePen or a Local Server.");
+            }
         }
     }
 
-    async function createMatcher() {
-        const descriptors = await Promise.all(authorized.map(async label => {
-            try {
-                const img = await faceapi.fetchImage(`./${label}.png`);
-                const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                return new faceapi.LabeledFaceDescriptors(label, [det.descriptor]);
-            } catch (e) { return null; }
-        }));
-        return new faceapi.FaceMatcher(descriptors.filter(d => d !== null), 0.6);
-    }
+    function setupDetection(video) {
+        const canvas = faceapi.createCanvasFromMedia(video);
+        document.getElementById('cam-box').append(canvas);
+        
+        const displaySize = { width: video.clientWidth, height: video.clientHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+        debug("CANVAS: Overlay ready.");
 
-    function logAccess(name, emotion) {
-        if (attendanceData.length > 0 && attendanceData[0].name === name) return;
-        
-        const entry = { name: name.toUpperCase(), emotion: emotion.toUpperCase(), time: new Date().toLocaleTimeString() };
-        attendanceData.unshift(entry);
-        
-        document.getElementById('attendance-list').innerHTML = 
-            `<div style="color: var(--green)">> [${entry.time}] ${entry.name} IDENTIFIED // MOOD: ${entry.emotion}</div>` 
-            + document.getElementById('attendance-list').innerHTML;
-        
-        const key = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        if(emotionCounts[key] !== undefined) emotionCounts[key]++;
-        chart.update();
-    }
-
-    function initChart() {
-        const ctx = document.getElementById('emotionChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'pie',
-            data: { 
-                labels: Object.keys(emotionCounts), 
-                datasets: [{ data: Object.values(emotionCounts), backgroundColor: ['#00ff41', '#ffcc66', '#ff4500', '#ff0000', '#007bff'] }] 
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#00ff41' } } } }
-        });
+        setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(video)
+                .withFaceLandmarks()
+                .withFaceExpressions();
+            
+            const resized = faceapi.resizeResults(detections, displaySize);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (detections.length > 0) {
+                faceapi.draw.drawDetections(canvas, resized);
+                faceapi.draw.drawFaceExpressions(canvas, resized);
+            }
+        }, 100);
     }
 </script>
 </body>
