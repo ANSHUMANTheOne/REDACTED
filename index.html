@@ -195,110 +195,149 @@
     // ============================================================================
     // START: GUEST LOGIC (ONLY EDIT THIS PART FOR GUEST FEATURES)
     // ============================================================================
-    async function initGuestOS() {
-        initChart();
-        const status = document.getElementById('scan-status');
-        status.innerText = "LOADING_AI_MODELS...";
-        
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-        ]);
+   async function initGuestOS() {
+    initChart();
+    const status = document.getElementById('scan-status');
+    status.innerText = "LOADING_AI_MODELS...";
+    
+    // Load models from the CDN
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+    ]);
 
-        status.innerText = "ENCODING_PNG_ASSETS...";
-        faceMatcher = await createMatcher();
-        
-        status.innerText = "GATEWAY_ONLINE";
-        startCamera();
-    }
+    status.innerText = "ENCODING_PNG_ASSETS...";
+    faceMatcher = await createMatcher();
+    
+    status.innerText = "GATEWAY_ONLINE";
+    startCamera();
+}
 
-    async function createMatcher() {
-        const descriptors = await Promise.all(authorized.map(async label => {
-            try {
-                const img = await faceapi.fetchImage(`./${label}.png`);
-                const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                return new faceapi.LabeledFaceDescriptors(label, [det.descriptor]);
-            } catch (e) { return null; }
-        }));
-        return new faceapi.FaceMatcher(descriptors.filter(d => d !== null), 0.6);
-    }
+async function createMatcher() {
+    const descriptors = await Promise.all(authorized.map(async label => {
+        try {
+            // This looks for anshuman.png and adhish.png in your folder
+            const img = await faceapi.fetchImage(`./${label}.png`);
+            const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+            return new faceapi.LabeledFaceDescriptors(label, [det.descriptor]);
+        } catch (e) { 
+            console.error(`Error loading image for ${label}:`, e);
+            return null; 
+        }
+    }));
+    return new faceapi.FaceMatcher(descriptors.filter(d => d !== null), 0.6);
+}
 
-    function startCamera() {
-        const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: {} }).then(stream => { 
+function startCamera() {
+    const video = document.getElementById('video');
+    navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => { 
             video.srcObject = stream;
-            setInterval(checkFace, 3000);
+            // Scans for a face every 3 seconds
+            setInterval(checkFace, 3000); 
+        })
+        .catch(err => {
+            document.getElementById('scan-status').innerText = "CAMERA_ERROR: CHECK_PERMISSIONS";
         });
-    }
+}
 
-    async function checkFace() {
-        const video = document.getElementById('video');
-        const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptor();
-        
-        if (detection) {
-            const match = faceMatcher.findBestMatch(detection.descriptor);
-            if (match.label !== 'unknown') {
-                const emotion = Object.keys(detection.expressions).reduce((a, b) => detection.expressions[a] > detection.expressions[b] ? a : b);
-                runScanAnimation(match.label === 'anshuman' ? 'Anshuman' : 'Adhish', emotion);
-            }
+async function checkFace() {
+    const video = document.getElementById('video');
+    // Detect face, landmarks, expressions, and identity
+    const detection = await faceapi.detectSingleFace(video)
+        .withFaceLandmarks()
+        .withFaceExpressions()
+        .withFaceDescriptor();
+    
+    if (detection) {
+        const match = faceMatcher.findBestMatch(detection.descriptor);
+        if (match.label !== 'unknown') {
+            // Find the expression with the highest score (e.g., "happy")
+            const emotion = Object.keys(detection.expressions).reduce((a, b) => 
+                detection.expressions[a] > detection.expressions[b] ? a : b);
+            
+            runScanAnimation(match.label, emotion);
         }
     }
+}
 
-    function runScanAnimation(name, emotion) {
-        const bar = document.getElementById('progress-bar');
-        const container = document.getElementById('progress-container');
-        const status = document.getElementById('scan-status');
-        
-        container.style.display = 'block';
-        status.innerText = `IDENTIFYING: ${name.toUpperCase()}...`;
-        
-        let w = 0;
-        let int = setInterval(() => {
-            w += 5; bar.style.width = w + "%";
-            if (w >= 100) {
-                clearInterval(int);
-                container.style.display = 'none';
-                bar.style.width = "0%";
-                markAttendance(name, emotion);
-            }
-        }, 50);
-    }
+function runScanAnimation(name, emotion) {
+    const bar = document.getElementById('progress-bar');
+    const container = document.getElementById('progress-container');
+    const status = document.getElementById('scan-status');
+    
+    container.style.display = 'block';
+    status.innerText = `IDENTIFYING: ${name.toUpperCase()}...`;
+    
+    let w = 0;
+    let int = setInterval(() => {
+        w += 5; 
+        bar.style.width = w + "%";
+        if (w >= 100) {
+            clearInterval(int);
+            container.style.display = 'none';
+            bar.style.width = "0%";
+            markAttendance(name, emotion);
+        }
+    }, 50);
+}
 
-    function markAttendance(name, emotion) {
-        const entry = { name, bus: "Bus No. 45", emotion: emotion.toUpperCase(), time: new Date().toLocaleTimeString() };
-        attendanceData.push(entry);
-        
-        const list = document.getElementById('attendance-list');
-        list.innerHTML = `<div>> [${entry.time}] ${name}: Marked (Emotion: ${entry.emotion})</div>` + list.innerHTML;
-        
-        const emoKey = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        if(emotionCounts[emoKey] !== undefined) emotionCounts[emoKey]++;
-        chart.update();
-        
-        document.getElementById('scan-status').innerText = `ACCESS_GRANTED: ${name.toUpperCase()}`;
-    }
+function markAttendance(name, emotion) {
+    const entry = { 
+        name: name.toUpperCase(), 
+        bus: "Bus No. 45", 
+        emotion: emotion.toUpperCase(), 
+        time: new Date().toLocaleTimeString() 
+    };
+    
+    attendanceData.push(entry);
+    
+    const list = document.getElementById('attendance-list');
+    list.innerHTML = `<div>> [${entry.time}] ${entry.name}: Marked (${entry.emotion})</div>` + list.innerHTML;
+    
+    const emoKey = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+    if(emotionCounts[emoKey] !== undefined) emotionCounts[emoKey]++;
+    chart.update();
+    
+    document.getElementById('scan-status').innerText = `ACCESS_GRANTED: ${entry.name}`;
+}
 
-    function initChart() {
-        const ctx = document.getElementById('emotionChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'pie',
-            data: { labels: Object.keys(emotionCounts), datasets: [{ data: Object.values(emotionCounts), backgroundColor: ['#00ff41', '#ffcc66', '#ff4500', '#ff0000', '#007bff'] }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#00ff41', font: { family: 'VT323' } } } } }
-        });
-    }
+function initChart() {
+    const ctx = document.getElementById('emotionChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'pie',
+        data: { 
+            labels: Object.keys(emotionCounts), 
+            datasets: [{ 
+                data: Object.values(emotionCounts), 
+                backgroundColor: ['#00ff41', '#ffcc66', '#ff4500', '#ff0000', '#007bff'] 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { 
+                    labels: { color: '#00ff41', font: { family: 'VT323' } } 
+                } 
+            } 
+        }
+    });
+}
 
-    function downloadCSV() {
-        let csv = "Name,Bus,Emotion,Time\n" + attendanceData.map(r => `${r.name},${r.bus},${r.emotion},${r.time}`).join("\n");
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('href', url);
-        a.setAttribute('download', 'Bus45_Attendance.csv');
-        a.click();
-    }
+function downloadCSV() {
+    let csv = "Name,Bus,Emotion,Time\n" + 
+        attendanceData.map(r => `${r.name},${r.bus},${r.emotion},${r.time}`).join("\n");
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'Bus45_Attendance.csv');
+    a.click();
+}
     // ============================================================================
     // END: GUEST LOGIC
     // ============================================================================
