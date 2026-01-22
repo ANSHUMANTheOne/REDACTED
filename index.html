@@ -2,70 +2,48 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFR.OS // BUS_45_GATEWAY_V6</title>
+    <title>AFR.OS // BUS_45_HYBRID_FINAL</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <style>
         :root { --green: #00ff41; --amber: #ffcc66; }
         body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
         .container { display: flex; height: 100vh; padding: 15px; box-sizing: border-box; gap: 15px; }
-        
-        /* VIDEO AREA */
-        .scanner-box { 
-            flex: 1.4; border: 1px solid var(--green); position: relative; 
-            background: #050505; display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-        }
-        
-        /* The video is mirrored for natural movement */
-        #video { 
-            width: 100%; height: 100%; 
-            object-fit: contain; 
-            transform: scaleX(-1); 
-        }
-
-        /* The canvas is NOT globally flipped anymore to keep text readable */
-        canvas { 
-            position: absolute; 
-            top: 0; left: 0; 
-            pointer-events: none; 
-        }
-
-        #scan-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8); display: none; padding: 20px;
-            font-size: 24px; z-index: 999; color: var(--green); border: 1px solid var(--green);
-        }
-
-        /* SIDEBAR */
+        .scanner-box { flex: 1.4; border: 1px solid var(--green); position: relative; background: #050505; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        #scan-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.85); display: none; padding: 25px; font-size: 28px; z-index: 999; color: var(--green); border: 2px solid var(--green); }
         .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .panel { border: 1px solid var(--green); padding: 12px; background: rgba(0, 255, 65, 0.02); }
         .log-container { height: 140px; overflow-y: auto; font-size: 13px; border-top: 1px solid #222; margin-top: 5px; }
-        #status-bar { position: absolute; bottom: 0; left: 0; padding: 8px; background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; }
+        button.action-btn { width: 100%; background: transparent; border: 1px solid var(--amber); color: var(--amber); padding: 10px; font-family: 'VT323'; cursor: pointer; margin-top: 10px; font-size: 16px; }
+        button.action-btn:hover { background: var(--amber); color: black; }
         #boot-overlay { position: fixed; inset: 0; background: black; z-index: 10000; display: flex; justify-content: center; align-items: center; }
-        button { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 20px; font-family: 'VT323'; cursor: pointer; font-size: 20px; }
+        #initialize-btn { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 20px; font-family: 'VT323'; cursor: pointer; font-size: 22px; }
     </style>
 </head>
 <body>
 
 <div id="boot-overlay">
-    <button onclick="bootSequence()">[ INITIALIZE_BUS_45_GATEWAY ]</button>
+    <button id="initialize-btn" onclick="bootSequence()">[ INITIALIZE_BUS_45_HYBRID_CORE ]</button>
 </div>
 
 <div class="container">
     <div class="scanner-box" id="cam-container">
         <div id="scan-overlay">ANALYZING_BIOMETRICS...</div>
         <video id="video" autoplay muted playsinline></video>
-        <div id="status-bar">STATUS: STANDBY...</div>
     </div>
 
     <div class="sidebar">
         <div class="panel">
             <h3 style="margin:0; color: var(--amber);">[ ATTENDANCE_LOG // BUS_45 ]</h3>
-            <div id="attendance-log" class="log-container">> AWAITING MATCH...</div>
+            <div id="attendance-log" class="log-container">> AWAITING BIOMETRIC_IDENT...</div>
+            <button class="action-btn" onclick="downloadLogs()">[ DOWNLOAD_DAILY_LOG ]</button>
         </div>
         <div class="panel">
             <h3 style="margin:0; color: var(--green);">[ REALTIME_EMOTION_SCAN ]</h3>
-            <div id="emotion-log" class="log-container">> STANDBY...</div>
+            <div id="emotion-log" class="log-container">> MONITORING_STREAMS...</div>
         </div>
         <div class="panel" style="height: 220px;">
             <canvas id="emotionChart"></canvas>
@@ -77,34 +55,27 @@
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
 <script>
-    const authorized = ['anshuman', 'adhish'];
+    const TM_URL = "https://teachablemachine.withgoogle.com/models/hHnONp-P9/"; 
+    let attendanceHistory = []; // For the download feature
     let attendanceSet = new Set();
     let emotionData = [0, 0, 0, 0, 0, 0];
-    let chart, faceMatcher;
+    let chart, tmModel;
 
     async function bootSequence() {
         document.getElementById('boot-overlay').style.display = 'none';
         initChart();
         await startCamera();
 
-        const status = document.getElementById('status-bar');
         try {
-            status.innerText = "LOADING AI MODELS...";
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+            const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
             await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+                faceapi.nets.faceExpressionNet.loadFromUri(FACE_MODEL_URL),
+                tmImage.load(TM_URL + "model.json", TM_URL + "metadata.json").then(m => tmModel = m)
             ]);
-
-            faceMatcher = await createMatcher();
-            status.innerText = "SYSTEM_ACTIVE // SCANNING_BUS_45";
             runDetectionLoop();
-        } catch (e) {
-            status.innerText = "AI_OFFLINE // MANUAL_SCAN_MODE";
-            runDetectionLoop();
-        }
+        } catch (e) { console.error("AI_INIT_FAILED", e); }
     }
 
     async function startCamera() {
@@ -114,77 +85,70 @@
         return new Promise(res => video.onloadedmetadata = res);
     }
 
-    async function createMatcher() {
-        const descriptors = [];
-        for (const label of authorized) {
-            try {
-                const img = await faceapi.fetchImage(`./${label}.png`);
-                const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                if (det) descriptors.push(new faceapi.LabeledFaceDescriptors(label, [det.descriptor]));
-            } catch (e) { console.warn(`Skipping ${label}`); }
-        }
-        return descriptors.length > 0 ? new faceapi.FaceMatcher(descriptors, 0.6) : null;
-    }
-
     function runDetectionLoop() {
         const video = document.getElementById('video');
         const overlay = document.getElementById('scan-overlay');
-        const camContainer = document.getElementById('cam-container');
-        
         const canvas = faceapi.createCanvasFromMedia(video);
-        camContainer.append(canvas);
-        
+        document.getElementById('cam-container').append(canvas);
         const displaySize = { width: video.clientWidth, height: video.clientHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
         setInterval(async () => {
             overlay.style.display = 'block';
-            
-            const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
-            
-            // MAGIC FIX: We flip the detection coordinates to match the mirrored video
+            const [detections, predictions] = await Promise.all([
+                faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions(),
+                tmModel.predict(video)
+            ]);
+
+            const top = predictions.reduce((a, b) => (a.probability > b.probability) ? a : b);
+            let name = (top.probability > 0.85) ? top.className : "UNKNOWN_GUEST";
+
             const resized = faceapi.resizeResults(detections, displaySize);
-            const flippedDetections = resized.map(d => {
+            const flipped = resized.map(d => {
                 const box = d.detection.box;
-                // Reverse the X coordinate: NewX = CanvasWidth - OldX - BoxWidth
-                const flippedBox = new faceapi.Box(displaySize.width - box.x - box.width, box.y, box.width, box.height);
-                d.detection._box = flippedBox;
+                d.detection._box = new faceapi.Box(displaySize.width - box.x - box.width, box.y, box.width, box.height);
                 return d;
             });
 
             canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw detections with normal, readable text
-            faceapi.draw.drawDetections(canvas, flippedDetections);
-            faceapi.draw.drawFaceExpressions(canvas, flippedDetections);
+            faceapi.draw.drawDetections(canvas, flipped);
+            faceapi.draw.drawFaceExpressions(canvas, flipped);
 
-            flippedDetections.forEach(d => {
+            flipped.forEach(d => {
                 const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                let name = "UNKNOWN_GUEST";
-                if (faceMatcher) name = faceMatcher.findBestMatch(d.descriptor).label;
-                updateLogsAndChart(name, emotion);
+                updateSystem(name, emotion);
             });
 
             setTimeout(() => { overlay.style.display = 'none'; }, 600);
         }, 2000); 
     }
 
-    function updateLogsAndChart(name, emotion) {
-        const time = new Date().toLocaleTimeString();
-        const emoLog = document.getElementById('emotion-log');
-        emoLog.innerHTML = `<div>> [${time}] ${name.toUpperCase()}: ${emotion.toUpperCase()}</div>` + emoLog.innerHTML;
+    function updateSystem(name, emotion) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        const fullDateStr = now.toLocaleDateString();
+        
+        document.getElementById('emotion-log').innerHTML = `<div>> [${timeStr}] ${name.toUpperCase()}: ${emotion.toUpperCase()}</div>` + document.getElementById('emotion-log').innerHTML;
 
-        if (name !== 'unknown' && name !== 'UNKNOWN_GUEST' && !attendanceSet.has(name)) {
+        if (name !== 'UNKNOWN_GUEST' && name !== 'Background' && !attendanceSet.has(name)) {
             attendanceSet.add(name);
-            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${time}] ${name.toUpperCase()}: BOARDED_BUS_45</div>` + document.getElementById('attendance-log').innerHTML;
+            const entry = `${fullDateStr} ${timeStr} - ${name.toUpperCase()}: BOARDED_BUS_45`;
+            attendanceHistory.push(entry);
+            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${timeStr}] ${name.toUpperCase()}: LOGGED</div>` + document.getElementById('attendance-log').innerHTML;
         }
 
         const labels = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'surprised'];
-        const index = labels.indexOf(emotion);
-        if (index !== -1) {
-            emotionData[index]++;
-            chart.update();
-        }
+        const idx = labels.indexOf(emotion);
+        if (idx !== -1) { emotionData[idx]++; chart.update(); }
+    }
+
+    function downloadLogs() {
+        if (attendanceHistory.length === 0) return alert("NO LOG DATA FOUND.");
+        const blob = new Blob([attendanceHistory.join('\n')], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `BUS_45_LOG_${new Date().toLocaleDateString().replace(/\//g,'-')}.txt`;
+        a.click();
     }
 
     function initChart() {
@@ -195,14 +159,7 @@
                 labels: ['Neutral', 'Happy', 'Sad', 'Angry', 'Fearful', 'Surprised'],
                 datasets: [{ data: emotionData, backgroundColor: '#00ff41' }] 
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false,
-                scales: { 
-                    y: { beginAtZero: true, ticks: { color: '#00ff41', stepSize: 1 }, grid: { color: '#222' } },
-                    x: { ticks: { color: '#00ff41' }, grid: { display: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#00ff41', stepSize: 1 }, grid: { color: '#222' } }, x: { ticks: { color: '#00ff41' }, grid: { display: false } } }, plugins: { legend: { display: false } } }
         });
     }
 </script>
