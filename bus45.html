@@ -1,38 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AFR.OS // BUS_45_GATEWAY_FINAL</title>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-    <style>
-        :root { --green: #00ff41; --amber: #ffcc66; }
-        body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
-        .container { display: flex; height: 100vh; padding: 15px; box-sizing: border-box; gap: 15px; }
-        
-        /* 1. THE CAMERA BOX */
-        .scanner-box { flex: 1.4; border: 1px solid var(--green); position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-        #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 5; }
-        #status-bar { position: absolute; bottom: 0; left: 0; padding: 8px; background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; font-size: 14px; }
+<meta charset="UTF-8">
+<title>AFR.OS // BUS_45_STABLE_V11</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
-        /* 2. THE SIDEBAR */
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 350px; }
-        .panel { border: 1px solid var(--green); padding: 12px; background: rgba(0, 255, 65, 0.02); }
-        .log-container { height: 130px; overflow-y: auto; font-size: 14px; border-top: 1px solid #222; margin-top: 5px; }
-        .chart-panel { height: 260px; position: relative; } 
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
-        #boot-overlay { position: fixed; inset: 0; background: black; z-index: 10000; display: flex; justify-content: center; align-items: center; }
-        button { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 15px; font-family: 'VT323'; cursor: pointer; font-size: 18px; }
-        .dl-btn { border: 1px solid var(--amber); color: var(--amber); padding: 5px; font-size: 14px; width: 100%; margin-top: 5px; cursor: pointer; }
-        .dl-btn:hover { background: var(--amber); color: #000; }
-    </style>
+<style>
+:root { --green: #00ff41; --amber: #ffcc66; }
+
+body {
+    background: #000;
+    color: var(--green);
+    font-family: 'VT323', monospace;
+    margin: 0;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    padding: 15px;
+    box-sizing: border-box;
+    gap: 15px;
+}
+
+.scanner-box {
+    flex: 1.4;
+    border: 1px solid var(--green);
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scaleX(-1);
+}
+
+#face-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.sidebar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 350px;
+}
+
+.panel {
+    border: 1px solid var(--green);
+    padding: 12px;
+    background: rgba(0, 255, 65, 0.02);
+    position: relative;
+}
+
+.log-container {
+    height: 130px;
+    overflow-y: auto;
+    font-size: 13px;
+    border-top: 1px solid #222;
+    margin-top: 5px;
+}
+
+.chart-panel { height: 260px; }
+
+#status-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 8px;
+    background: rgba(0,0,0,0.9);
+    color: var(--amber);
+    width: 100%;
+    z-index: 10;
+    font-size: 14px;
+}
+
+#boot-overlay {
+    position: fixed;
+    inset: 0;
+    background: black;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+button {
+    background: transparent;
+    border: 2px solid var(--green);
+    color: var(--green);
+    padding: 15px;
+    font-family: 'VT323';
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.dl-btn {
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 5px;
+    font-size: 14px;
+    width: 100%;
+    margin-top: 5px;
+}
+</style>
 </head>
 <body>
 
+<script>
+  // REDIRECT IF NOT GUEST AUTHORIZED
+  if (sessionStorage.getItem("GUEST_AUTH") !== "TRUE") {
+      window.location.href = "index.html";
+  } else {
+      // remove any hash from URL
+      if (window.location.hash) window.location.hash = "";
+      console.log("Guest authorized, loading BUS_45...");
+  }
+</script>
+
 <div id="boot-overlay">
-    <button onclick="bootSequence()">[ INITIALIZE_BUS_45_STABLE_SYSTEM ]</button>
+    <button onclick="bootSequence()">[ INITIALIZE_STABLE_SYSTEM_V11 ]</button>
 </div>
 
 <div class="container">
@@ -46,7 +148,7 @@
         <div class="panel">
             <h3 style="margin:0; color: var(--amber);">[ ATTENDANCE_LOG ]</h3>
             <div id="attendance-log" class="log-container">> WAITING...</div>
-            <button class="dl-btn" onclick="downloadLogs()">SAVE_LOG_FILE.TXT</button>
+            <button class="dl-btn" onclick="downloadLogs()">SAVE_HISTORY.TXT</button>
         </div>
         <div class="panel">
             <h3 style="margin:0; color: var(--green);">[ EMOTION_LOG ]</h3>
@@ -54,7 +156,7 @@
         </div>
         <div class="panel chart-panel">
             <h3 style="margin:0; color: var(--green);">[ EMOTION_METRICS ]</h3>
-            <canvas id="sidebarGraphCanvas"></canvas> 
+            <canvas id="sidebarGraphCanvas"></canvas>
         </div>
     </div>
 </div>
@@ -63,125 +165,127 @@
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
 <script>
-    const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/hHnONp-P9/"; 
-    
-    let attendanceSet = new Set();
-    let attendanceHistory = [];
-    let emotionData = [0, 0, 0, 0, 0, 0];
-    let chart, tmModel;
+const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/hHnONp-P9/";
 
-    async function bootSequence() {
-        document.getElementById('boot-overlay').style.display = 'none';
-        initChart(); 
-        await startCamera();
-        const status = document.getElementById('status-bar');
-        
-        try {
-            status.innerText = "INITIALIZING AI CORES...";
-            const FACE_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-            
-            await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_URL),
-                faceapi.nets.faceExpressionNet.loadFromUri(FACE_URL),
-                tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json").then(m => tmModel = m)
-            ]);
+let attendanceSet = new Set();
+let attendanceHistory = [];
+let emotionData = [0, 0, 0, 0, 0, 0];
+let chart, tmModel;
 
-            status.innerText = "SYSTEM_ACTIVE // BUS_45_CONNECTED";
-            runDetectionLoop();
-        } catch (e) { 
-            status.innerText = "AI_INIT_FAILED: CHECK CONNECTION"; 
-            console.error(e); 
-        }
+async function bootSequence() {
+    document.getElementById('boot-overlay').style.display = 'none';
+    initChart();
+    await startCamera();
+    const status = document.getElementById('status-bar');
+    try {
+        status.innerText = "LOADING AI CORES...";
+        const FACE_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        await Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_URL),
+            faceapi.nets.faceExpressionNet.loadFromUri(FACE_URL),
+            tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json")
+                .then(m => tmModel = m)
+        ]);
+        status.innerText = "SYSTEM_ACTIVE // BUS_45";
+        runLoop();
+    } catch(e) {
+        status.innerText = "AI_INIT_FAILED: CHECK URL";
+        console.error(e);
     }
+}
 
-    async function startCamera() {
-        const video = document.getElementById('video');
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        return new Promise(res => video.onloadedmetadata = res);
-    }
+async function startCamera() {
+    const video = document.getElementById('video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    return new Promise(res => video.onloadedmetadata = res);
+}
 
-    function runDetectionLoop() {
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('face-canvas');
-        const displaySize = { width: video.clientWidth, height: video.clientHeight };
-        faceapi.matchDimensions(canvas, displaySize);
+function runLoop() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('face-canvas');
+    const displaySize = { width: video.clientWidth, height: video.clientHeight };
+    faceapi.matchDimensions(canvas, displaySize);
 
-        setInterval(async () => {
-            if (!tmModel) return;
+    setInterval(async () => {
+        const [detections, predictions] = await Promise.all([
+            faceapi.detectAllFaces(video).withFaceExpressions(),
+            tmModel.predict(video)
+        ]);
 
-            const [detections, predictions] = await Promise.all([
-                faceapi.detectAllFaces(video).withFaceExpressions(),
-                tmModel.predict(video)
-            ]);
+        const top = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
+        const name = top.probability > 0.85 ? top.className : "GUEST";
 
-            const top = predictions.reduce((a, b) => (a.probability > b.probability) ? a : b);
-            const name = (top.probability > 0.85) ? top.className : "GUEST";
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const resized = faceapi.resizeResults(detections, displaySize);
+        resized.forEach(d => {
+            const box = d.detection.box;
+            const adjX = displaySize.width - box.x - box.width;
 
-            const resized = faceapi.resizeResults(detections, displaySize);
-            resized.forEach(d => {
-                const box = d.detection.box;
-                const adjX = displaySize.width - box.x - box.width; // Fixes Mirror 
-                
-                ctx.strokeStyle = '#00ff41';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(adjX, box.y, box.width, box.height);
-                
-                ctx.fillStyle = '#00ff41';
-                ctx.font = '20px VT323';
-                ctx.fillText(`${name.toUpperCase()} (${Math.round(top.probability*100)}%)`, adjX, box.y > 20 ? box.y - 10 : 20);
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(adjX, box.y, box.width, box.height);
 
-                const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                updateSystem(name, emotion);
-            });
-        }, 1500); 
-    }
+            ctx.fillStyle = '#00ff41';
+            ctx.font = '16px VT323';
+            ctx.fillText(`${name.toUpperCase()} ${Math.round(top.probability*100)}%`, adjX, box.y > 20 ? box.y - 5 : 20);
 
-    function updateSystem(name, emotion) {
-        const time = new Date().toLocaleTimeString();
-        document.getElementById('emotion-log').innerHTML = `<div>> [${time}] ${emotion.toUpperCase()}</div>` + document.getElementById('emotion-log').innerHTML;
-
-        if (name !== 'GUEST' && name !== 'Background' && !attendanceSet.has(name)) {
-            attendanceSet.add(name);
-            attendanceHistory.push(`${new Date().toLocaleDateString()} ${time} - ${name}`);
-            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${time}] ${name}: LOGGED</div>` + document.getElementById('attendance-log').innerHTML;
-        }
-
-        const labels = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'surprised'];
-        const idx = labels.indexOf(emotion);
-        if (idx !== -1) { emotionData[idx]++; chart.update(); }
-    }
-
-    function downloadLogs() {
-        if (attendanceHistory.length === 0) return alert("NO LOGS TO SAVE");
-        const blob = new Blob([attendanceHistory.join('\n')], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = "Bus_45_Log.txt";
-        a.click();
-    }
-
-    function initChart() {
-        const ctx = document.getElementById('sidebarGraphCanvas').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'bar',
-            data: { 
-                labels: ['Neutral', 'Happy', 'Sad', 'Angry', 'Fearful', 'Surprised'], 
-                datasets: [{ data: emotionData, backgroundColor: '#00ff41' }] 
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false,
-                scales: { 
-                    y: { beginAtZero: true, ticks: { color: '#00ff41' }, grid: { color: '#222' } },
-                    x: { ticks: { color: '#00ff41' }, grid: { display: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
+            const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+            updateSystem(name, emotion);
         });
+    }, 2000);
+}
+
+function updateSystem(name, emotion) {
+    const time = new Date().toLocaleTimeString();
+    document.getElementById('emotion-log').innerHTML =
+        `<div>> [${time}] ${emotion.toUpperCase()}</div>` + document.getElementById('emotion-log').innerHTML;
+
+    if (name !== 'GUEST' && name !== 'Background' && !attendanceSet.has(name)) {
+        attendanceSet.add(name);
+        attendanceHistory.push(`${new Date().toLocaleDateString()} ${time} - ${name}`);
+        document.getElementById('attendance-log').innerHTML =
+            `<div style="color:var(--amber)">> [${time}] ${name}: LOGGED</div>` + document.getElementById('attendance-log').innerHTML;
     }
+
+    const labels = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'surprised'];
+    const idx = labels.indexOf(emotion);
+    if (idx !== -1) {
+        emotionData[idx]++;
+        chart.update();
+    }
+}
+
+function downloadLogs() {
+    const blob = new Blob([attendanceHistory.join('\n')], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "Bus_45_Log.txt";
+    a.click();
+}
+
+function initChart() {
+    const ctx = document.getElementById('sidebarGraphCanvas').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Neutral', 'Happy', 'Sad', 'Angry', 'Fearful', 'Surprised'],
+            datasets: [{ data: emotionData, backgroundColor: '#00ff41' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#00ff41' }, grid: { color: '#222' } },
+                x: { ticks: { color: '#00ff41' }, grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 </script>
+
 </body>
 </html>
