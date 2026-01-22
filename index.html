@@ -2,26 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFR.OS // BUS_45_GATEWAY_FINAL</title>
+    <title>AFR.OS // BUS_45_GATEWAY_V5</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root { --green: #00ff41; --amber: #ffcc66; }
         body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
         .container { display: flex; height: 100vh; padding: 15px; box-sizing: border-box; gap: 15px; }
         
-        /* VIDEO AREA */
+        /* --- THE MIRROR FIX --- */
         .scanner-box { 
             flex: 1.4; border: 1px solid var(--green); position: relative; 
             background: #050505; display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
         }
-        #video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; }
+        
+        /* We use a wrapper to ensure everything inside flips together */
+        .mirror-wrapper {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            transform: scaleX(-1); /* GLOBAL MIRROR FLIP */
+        }
 
-        /* BRIEF LOADING OVERLAY */
+        #video { width: 100%; height: 100%; object-fit: contain; }
+        canvas { position: absolute; pointer-events: none; }
+
+        /* --- LOADING OVERLAY FIX --- */
         #scan-overlay {
-            position: absolute; inset: 0; background: rgba(0, 255, 65, 0.1);
-            display: none; align-items: center; justify-content: center;
-            font-size: 30px; z-index: 5; border: 2px solid var(--green);
+            position: absolute; inset: 0; 
+            background: rgba(0, 0, 0, 0.7); /* Darker for better visibility */
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 32px; z-index: 999; /* Higher than everything else */
+            color: var(--amber);
+            border: 4px solid var(--amber);
         }
 
         /* SIDEBAR */
@@ -29,7 +41,7 @@
         .panel { border: 1px solid var(--green); padding: 12px; background: rgba(0, 255, 65, 0.02); }
         .log-container { height: 140px; overflow-y: auto; font-size: 13px; border-top: 1px solid #222; margin-top: 5px; }
         #status-bar { position: absolute; bottom: 0; left: 0; padding: 8px; background: rgba(0,0,0,0.9); color: var(--amber); width: 100%; z-index: 10; }
-        #boot-overlay { position: fixed; inset: 0; background: black; z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        #boot-overlay { position: fixed; inset: 0; background: black; z-index: 10000; display: flex; justify-content: center; align-items: center; }
         button { background: transparent; border: 2px solid var(--green); color: var(--green); padding: 20px; font-family: 'VT323'; cursor: pointer; font-size: 20px; }
     </style>
 </head>
@@ -41,8 +53,15 @@
 
 <div class="container">
     <div class="scanner-box" id="cam-container">
-        <div id="scan-overlay">ANALYZING_BIOMETRICS...</div>
-        <video id="video" autoplay muted playsinline></video>
+        <div id="scan-overlay">
+            <div style="margin-bottom: 10px;">ANALYZING_BIOMETRICS...</div>
+            <div id="progress-dots">....</div>
+        </div>
+        
+        <div class="mirror-wrapper">
+            <video id="video" autoplay muted playsinline></video>
+        </div>
+        
         <div id="status-bar">STATUS: STANDBY...</div>
     </div>
 
@@ -51,12 +70,10 @@
             <h3 style="margin:0; color: var(--amber);">[ ATTENDANCE_LOG // BUS_45 ]</h3>
             <div id="attendance-log" class="log-container">> AWAITING MATCH...</div>
         </div>
-
         <div class="panel">
             <h3 style="margin:0; color: var(--green);">[ REALTIME_EMOTION_SCAN ]</h3>
             <div id="emotion-log" class="log-container">> STANDBY...</div>
         </div>
-
         <div class="panel" style="height: 220px;">
             <canvas id="emotionChart"></canvas>
         </div>
@@ -69,13 +86,12 @@
 <script>
     const authorized = ['anshuman', 'adhish'];
     let attendanceSet = new Set();
-    // Tracking indices for Chart.js: Neutral, Happy, Sad, Angry, Fearful, Surprised
     let emotionData = [0, 0, 0, 0, 0, 0];
     let chart, faceMatcher;
 
     async function bootSequence() {
         document.getElementById('boot-overlay').style.display = 'none';
-        initChart(); // Start the chart immediately
+        initChart();
         await startCamera();
 
         const status = document.getElementById('status-bar');
@@ -94,8 +110,8 @@
             status.innerText = "SYSTEM_ACTIVE // SCANNING_BUS_45";
             runDetectionLoop();
         } catch (e) {
-            status.innerText = "AI_ERROR: CHECK CONSOLE";
-            runDetectionLoop(); // Still try to run camera
+            status.innerText = "AI_OFFLINE // MANUAL_SCAN_MODE";
+            runDetectionLoop();
         }
     }
 
@@ -120,14 +136,18 @@
 
     function runDetectionLoop() {
         const video = document.getElementById('video');
-        const canvas = faceapi.createCanvasFromMedia(video);
         const overlay = document.getElementById('scan-overlay');
-        document.getElementById('cam-container').append(canvas);
+        const wrapper = document.querySelector('.mirror-wrapper');
+        
+        // Create canvas inside the mirror wrapper so it flips with the video
+        const canvas = faceapi.createCanvasFromMedia(video);
+        wrapper.append(canvas);
+        
         const displaySize = { width: video.clientWidth, height: video.clientHeight };
         faceapi.matchDimensions(canvas, displaySize);
 
         setInterval(async () => {
-            // 1. BRIEF LOADING EFFECT
+            // SHOW LOADING
             overlay.style.display = 'flex';
             
             const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
@@ -139,13 +159,15 @@
             resized.forEach(d => {
                 const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
                 let name = "UNKNOWN_GUEST";
-                if (faceMatcher) name = faceMatcher.findBestMatch(d.descriptor).label;
-                
+                if (faceMatcher) {
+                    const match = faceMatcher.findBestMatch(d.descriptor);
+                    name = match.label;
+                }
                 updateLogsAndChart(name, emotion);
             });
 
-            // Hide loading after a short burst (500ms)
-            setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            // HIDE LOADING AFTER 800ms
+            setTimeout(() => { overlay.style.display = 'none'; }, 800);
 
         }, 2000); // 2 SECOND TIMER
     }
@@ -157,10 +179,9 @@
 
         if (name !== 'unknown' && name !== 'UNKNOWN_GUEST' && !attendanceSet.has(name)) {
             attendanceSet.add(name);
-            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${time}] ${name.toUpperCase()}: LOGGED_BUS_45</div>` + document.getElementById('attendance-log').innerHTML;
+            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${time}] ${name.toUpperCase()}: BOARDED_BUS_45</div>` + document.getElementById('attendance-log').innerHTML;
         }
 
-        // UPDATE CHART DATA
         const labels = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'surprised'];
         const index = labels.indexOf(emotion);
         if (index !== -1) {
@@ -176,7 +197,6 @@
             data: { 
                 labels: ['Neutral', 'Happy', 'Sad', 'Angry', 'Fearful', 'Surprised'],
                 datasets: [{ 
-                    label: 'PSYCH_ANALYSIS', 
                     data: emotionData, 
                     backgroundColor: '#00ff41',
                     borderColor: '#00ff41',
