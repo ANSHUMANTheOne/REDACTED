@@ -2,391 +2,162 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AFR.OS // ADMINISTRATIVE_CONSOLE</title>
+    <title>AFR.OS // BIOMETRIC_GATEWAY</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --orange: #ff4500;
-            --red: #ff0000;
-            --green: #00ff41;
-            --amber: #ffcc66;
-        }
-
-        body, html {
-            height: 100%; margin: 0; padding: 0;
-            background: radial-gradient(circle at center, #2b0d00 0%, #0d0400 60%, #000 100%);
-            font-family: 'VT323', monospace; color: var(--orange); overflow: hidden;
-            user-select: none;
-        }
-
-        .overlay-scan {
-            position: fixed; inset: 0; pointer-events: none; z-index: 1000;
-            background: repeating-linear-gradient(to bottom, rgba(255,69,0,0.08) 0px, transparent 2px);
-        }
-
-        #login-screen {
-            position: fixed; inset: 0; background: black; z-index: 5000;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-
-        input {
-            background: transparent; border: 1px solid var(--orange); color: var(--orange);
-            font-family: 'VT323', monospace; font-size: 24px; padding: 10px; text-align: center;
-            outline: none; box-shadow: 0 0 15px var(--orange); margin-top: 20px;
-        }
-
-        .desktop { position: relative; width: 100%; height: 100%; display: none; }
-
-        /* GUEST SPACE STYLING */
-        #guest-space {
-            position: fixed; inset: 0; background: #050505; display: none; 
-            padding: 20px; color: var(--green); overflow-y: auto; z-index: 2000;
-        }
-
-        .guest-grid { display: flex; gap: 20px; margin-top: 20px; height: 80vh; }
-        .scanner-box { flex: 1.5; border: 1px solid var(--green); position: relative; background: #000; padding: 10px; }
-        .stats-box { flex: 1; border: 1px solid var(--green); padding: 15px; background: rgba(0,255,65,0.05); }
-
-        #video { width: 100%; height: auto; border: 1px solid #222; transform: scaleX(-1); }
+        :root { --green: #00ff41; --amber: #ffcc66; --red: #ff0000; }
+        body { background: #000; color: var(--green); font-family: 'VT323', monospace; margin: 0; overflow: hidden; }
         
-        /* WINDOWS */
-        .win {
-            position: absolute; background: rgba(0,0,0,0.96); border: 1px solid var(--orange);
-            box-shadow: 0 0 30px rgba(255,69,0,0.25); overflow: hidden; z-index: 10;
-        }
-        .win-header {
-            background: rgba(255,69,0,0.3); padding: 5px 12px; font-size: 14px;
-            border-bottom: 1px solid var(--orange); cursor: move; display: flex; justify-content: space-between;
-        }
-        .win-body { padding: 12px; }
-
-        #security-alert {
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--red); color: white; padding: 30px; z-index: 10000;
-            font-size: 32px; border: 4px solid white; text-align: center; font-weight: bold;
+        /* THE BOOT SCREEN OVERLAY */
+        #boot-overlay {
+            position: fixed; inset: 0; background: black; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border: 2px solid var(--green); margin: 10px;
         }
 
-        #surveillance-visual {
-            width: 100%; height: 180px; background: #000; position: relative; overflow: hidden;
-            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
+        #boot-btn {
+            background: transparent; border: 2px solid var(--green); color: var(--green);
+            padding: 20px 40px; font-family: 'VT323'; font-size: 30px; cursor: pointer;
+            box-shadow: 0 0 15px var(--green); transition: 0.3s;
         }
-        .scan-line { width: 100%; height: 2px; background: rgba(255,255,255,0.1); position: absolute; top: 0; animation: scanMove 4s linear infinite; }
-        @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
+        #boot-btn:hover { background: var(--green); color: black; }
 
-        #map-area { width: 100%; height: 220px; background: #050505; position: relative; border: 1px solid #331100; background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); }
-        .pulse-dot { position: absolute; width: 14px; height: 14px; background: var(--red); border-radius: 50%; box-shadow: 0 0 20px var(--red); animation: ping 1.2s infinite; }
-        @keyframes ping { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
-
-        .footer {
-            position: fixed; bottom: 0; width: 100%; padding: 6px 20px;
-            background: rgba(0,0,0,0.95); border-top: 1px solid var(--orange);
-            font-size: 14px; display: flex; justify-content: space-between; z-index: 1001;
+        .container { display: flex; height: 100vh; padding: 20px; box-sizing: border-box; gap: 20px; }
+        .scanner-box { 
+            flex: 1.5; border: 1px solid var(--green); position: relative; 
+            background: #050505; display: flex; justify-content: center; align-items: center;
         }
+        video { width: 100%; height: auto; transform: scaleX(-1); }
+        canvas { position: absolute; transform: scaleX(-1); pointer-events: none; }
+        
+        .sidebar { flex: 1; border: 1px solid var(--green); padding: 20px; }
+        .log { height: 250px; border-top: 1px solid var(--green); overflow-y: auto; font-size: 14px; margin-top: 20px; color: #aaa; }
     </style>
 </head>
-<body oncontextmenu="return triggerLockout();">
+<body>
 
-<div id="security-alert">FORGING IS UNAUTHORIZED // ACCESS LOGGED</div>
-
-<div id="login-screen">
-    <h1 style="font-size: 50px; letter-spacing: 15px; color: var(--red);">[ AFR.OS // CORE ]</h1>
-    <input type="password" id="passInput" placeholder="SYSTEM_KEY" autofocus>
+<div id="boot-overlay">
+    <h1 style="font-size: 50px; letter-spacing: 5px;">[ SYSTEM_OFFLINE ]</h1>
+    <p style="color: var(--amber);">MANUAL_OVERRIDE_REQUIRED_FOR_BIOMETRICS</p>
+    <button id="boot-btn" onclick="initializeSystem()">ACTIVATE_SENSOR_ARRAY</button>
 </div>
 
-<div class="overlay-scan"></div>
-
-<div class="desktop" id="main-desktop">
-    <div class="win" id="w-admin" style="bottom: 70px; right: 20px; width: 320px;">
-        <div class="win-header" style="background:rgba(255, 204, 102, 0.3);">ADMIN_MONITOR // AUTH_LEVEL_10</div>
-        <div class="win-body" style="color: var(--amber);">
-            NAME: <span style="background: var(--amber); color: black;">Anshuxxx xxxxxxxx</span><br>
-            ROLE: <span style="color: var(--red);">SUPREME_ADMIN</span><br>
-            AUTH: VERIFIED [AFR_FED_ORG]
+<div class="container">
+    <div class="scanner-box" id="cam-box">
+        <video id="video" autoplay muted playsinline></video>
+        <div style="position: absolute; bottom: 0; width: 100%; padding: 10px; background: rgba(0,0,0,0.7);">
+            <div id="status">STATUS: STANDBY</div>
         </div>
     </div>
-    <div class="win" id="w-tracker" style="top: 10%; left: 360px; width: 450px;">
-        <div class="win-header">AFR_SATELLITE // LIVE_INTERCEPT</div>
-        <div class="win-body">
-            <div id="map-area"><div class="pulse-dot" id="target-dot"></div></div>
-            <div style="margin-top: 12px; font-size: 15px;">
-                LOCATING: <span id="target-name" style="color: var(--amber);">SCANNING...</span><br>
-                GEO: <span id="target-coords">25.2048° N, 55.2708° E</span>
-            </div>
-        </div>
-    </div>
-    <div class="win" id="w-cam" style="top: 20px; left: 20px; width: 320px;">
-        <div class="win-header">SATELLITE_FEED // GLOBAL</div>
-        <div class="win-body"><div id="surveillance-visual"><div class="scan-line"></div></div></div>
-    </div>
-    <div class="win" id="w-log" style="bottom: 70px; left: 20px; width: 450px;">
-        <div class="win-header">TERMINAL_LOG</div>
-        <div class="win-body"><div id="hacker-log" style="color: var(--green); height: 130px; overflow: hidden; font-size: 13px;"></div></div>
-    </div>
-    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 280px; height: 75vh;">
-        <div class="win-header">WHITELIST</div>
-        <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 68vh; color: var(--green); font-size: 14px;"></div>
-    </div>
-</div>
 
-<div id="guest-space">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--green); padding-bottom: 10px;">
-        <h1 style="margin:0;">[ BUS_45 // BIOMETRIC_GATEWAY ]</h1>
-        <button onclick="downloadCSV()" style="background:var(--green); border:none; padding:5px 15px; cursor:pointer; font-family:'VT323';">SAVE_EXCEL_LOG</button>
+    <div class="sidebar">
+        <h2 style="margin: 0; color: var(--amber);">AFR_OS // BUS_45_GATEWAY</h2>
+        <div style="height: 180px;"><canvas id="emotionChart"></canvas></div>
+        <h3>LOG_OUTPUT</h3>
+        <div id="attendance-list" class="log">> INITIALIZE SENSOR TO BEGIN...</div>
     </div>
-
-    <div class="guest-grid">
-        <div class="scanner-box">
-            <video id="video" autoplay muted></video>
-            <div id="scan-status" style="font-size: 24px; margin-top: 15px; color: var(--amber);">CONNECTING_TO_CAMERA...</div>
-            <div id="progress-container" style="width: 100%; height: 10px; background: #111; margin-top: 10px; display:none;">
-                <div id="progress-bar" style="width: 0%; height: 100%; background: var(--green);"></div>
-            </div>
-        </div>
-
-        <div class="stats-box">
-            <h3 style="margin-top:0;">ATTENDANCE_LOG // BUS_45</h3>
-            <div id="attendance-list" style="height: 200px; overflow-y: auto; border-bottom: 1px solid var(--green); font-size: 14px; margin-bottom: 20px;">
-                > WAITING_FOR_AUTH...
-            </div>
-            <h3>EMOTION_ANALYTICS</h3>
-            <div style="height: 200px;"><canvas id="emotionChart"></canvas></div>
-        </div>
-    </div>
-</div>
-
-<div class="footer">
-    <span>SYSTEM: AFR.OS // AUTH: <span id="auth-tag">OFFLINE</span></span>
-    <span id="sys-time">TIME: 00:00:00</span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 
 <script>
-    const adminPass = "A$N#H";
-    const guestPass = "guest";
     const authorized = ['anshuman', 'adhish'];
-    const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
-    
     let attendanceData = [];
     let emotionCounts = { Happy: 0, Neutral: 0, Sad: 0, Angry: 0, Surprised: 0 };
-    let chart;
-    let faceMatcher;
+    let chart, faceMatcher;
 
-    // LOGIN LOGIC
-    document.getElementById('passInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            if (this.value === adminPass) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-desktop').style.display = 'block';
-                document.getElementById('auth-tag').innerText = "ADMIN_ANSHU";
-                startAdminOS();
-            } else if (this.value === guestPass) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('guest-space').style.display = 'block';
-                document.getElementById('auth-tag').innerText = "GUEST_USER";
-                initGuestOS();
-            }
-        }
-    });
+    async function initializeSystem() {
+        const status = document.getElementById('status');
+        const overlay = document.getElementById('boot-overlay');
+        
+        status.innerText = "STATUS: LOADING_MODELS...";
+        overlay.style.display = "none"; // Hide boot screen
 
-    // ============================================================================
-    // START: GUEST LOGIC (ONLY EDIT THIS PART FOR GUEST FEATURES)
-    // ============================================================================
-   async function initGuestOS() {
-    initChart();
-    const status = document.getElementById('scan-status');
-    status.innerText = "LOADING_AI_MODELS...";
-    
-    // Load models from the CDN
-    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-    await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-    ]);
-
-    status.innerText = "ENCODING_PNG_ASSETS...";
-    faceMatcher = await createMatcher();
-    
-    status.innerText = "GATEWAY_ONLINE";
-    startCamera();
-}
-
-async function createMatcher() {
-    const descriptors = await Promise.all(authorized.map(async label => {
         try {
-            // This looks for anshuman.png and adhish.png in your folder
-            const img = await faceapi.fetchImage(`./${label}.png`);
-            const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-            return new faceapi.LabeledFaceDescriptors(label, [det.descriptor]);
-        } catch (e) { 
-            console.error(`Error loading image for ${label}:`, e);
-            return null; 
-        }
-    }));
-    return new faceapi.FaceMatcher(descriptors.filter(d => d !== null), 0.6);
-}
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+            await Promise.all([
+                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+            ]);
 
-function startCamera() {
-    const video = document.getElementById('video');
-    navigator.mediaDevices.getUserMedia({ video: {} })
-        .then(stream => { 
-            video.srcObject = stream;
-            // Scans for a face every 3 seconds
-            setInterval(checkFace, 3000); 
-        })
-        .catch(err => {
-            document.getElementById('scan-status').innerText = "CAMERA_ERROR: CHECK_PERMISSIONS";
-        });
-}
-
-async function checkFace() {
-    const video = document.getElementById('video');
-    // Detect face, landmarks, expressions, and identity
-    const detection = await faceapi.detectSingleFace(video)
-        .withFaceLandmarks()
-        .withFaceExpressions()
-        .withFaceDescriptor();
-    
-    if (detection) {
-        const match = faceMatcher.findBestMatch(detection.descriptor);
-        if (match.label !== 'unknown') {
-            // Find the expression with the highest score (e.g., "happy")
-            const emotion = Object.keys(detection.expressions).reduce((a, b) => 
-                detection.expressions[a] > detection.expressions[b] ? a : b);
+            faceMatcher = await createMatcher();
+            initChart();
             
-            runScanAnimation(match.label, emotion);
-        }
-    }
-}
+            // FORCING CAMERA REQUEST
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById('video');
+            video.srcObject = stream;
 
-function runScanAnimation(name, emotion) {
-    const bar = document.getElementById('progress-bar');
-    const container = document.getElementById('progress-container');
-    const status = document.getElementById('scan-status');
-    
-    container.style.display = 'block';
-    status.innerText = `IDENTIFYING: ${name.toUpperCase()}...`;
-    
-    let w = 0;
-    let int = setInterval(() => {
-        w += 5; 
-        bar.style.width = w + "%";
-        if (w >= 100) {
-            clearInterval(int);
-            container.style.display = 'none';
-            bar.style.width = "0%";
-            markAttendance(name, emotion);
-        }
-    }, 50);
-}
+            video.onplay = () => {
+                const canvas = faceapi.createCanvasFromMedia(video);
+                document.getElementById('cam-box').append(canvas);
+                const displaySize = { width: video.clientWidth, height: video.clientHeight };
+                faceapi.matchDimensions(canvas, displaySize);
 
-function markAttendance(name, emotion) {
-    const entry = { 
-        name: name.toUpperCase(), 
-        bus: "Bus No. 45", 
-        emotion: emotion.toUpperCase(), 
-        time: new Date().toLocaleTimeString() 
-    };
-    
-    attendanceData.push(entry);
-    
-    const list = document.getElementById('attendance-list');
-    list.innerHTML = `<div>> [${entry.time}] ${entry.name}: Marked (${entry.emotion})</div>` + list.innerHTML;
-    
-    const emoKey = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-    if(emotionCounts[emoKey] !== undefined) emotionCounts[emoKey]++;
-    chart.update();
-    
-    document.getElementById('scan-status').innerText = `ACCESS_GRANTED: ${entry.name}`;
-}
+                setInterval(async () => {
+                    const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptors();
+                    const resized = faceapi.resizeResults(detections, displaySize);
+                    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // DRAWING THE BOX
+                    faceapi.draw.drawDetections(canvas, resized);
+                    faceapi.draw.drawFaceExpressions(canvas, resized);
 
-function initChart() {
-    const ctx = document.getElementById('emotionChart').getContext('2d');
-    chart = new Chart(ctx, {
-        type: 'pie',
-        data: { 
-            labels: Object.keys(emotionCounts), 
-            datasets: [{ 
-                data: Object.values(emotionCounts), 
-                backgroundColor: ['#00ff41', '#ffcc66', '#ff4500', '#ff0000', '#007bff'] 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { 
-                legend: { 
-                    labels: { color: '#00ff41', font: { family: 'VT323' } } 
-                } 
-            } 
-        }
-    });
-}
-
-function downloadCSV() {
-    let csv = "Name,Bus,Emotion,Time\n" + 
-        attendanceData.map(r => `${r.name},${r.bus},${r.emotion},${r.time}`).join("\n");
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('href', url);
-    a.setAttribute('download', 'Bus45_Attendance.csv');
-    a.click();
-}
-    // ============================================================================
-    // END: GUEST LOGIC
-    // ============================================================================
-
-    // --- ADMIN LOGIC (ORIGINAL) ---
-    function startAdminOS() {
-        const list = document.getElementById('personnel-list');
-        classmates.forEach(name => { list.innerHTML += `> ${name}<br>`; });
-        document.querySelectorAll('.win').forEach(makeDraggable);
-        setInterval(updateTracking, 3500);
-        setInterval(updateLog, 1500);
-    }
-
-    function updateTracking() {
-        const name = classmates[Math.floor(Math.random() * classmates.length)];
-        document.getElementById('target-name').innerText = name;
-        const dot = document.getElementById('target-dot');
-        dot.style.left = Math.random() * 90 + "%"; dot.style.top = Math.random() * 80 + "%";
-    }
-
-    function updateLog() {
-        const log = document.getElementById('hacker-log');
-        const msgs = ["MEM_SCAN: OK", "SSH_BYPASS: OK", "SATELLITE_LNK: OK"];
-        log.innerHTML += `[${new Date().toLocaleTimeString()}] ${msgs[Math.floor(Math.random()*msgs.length)]}<br>`;
-        if (log.innerHTML.split('<br>').length > 10) log.innerHTML = log.innerHTML.split('<br>').slice(1).join('<br>');
-    }
-
-    // GENERAL UTILS
-    function triggerLockout() {
-        const alertBox = document.getElementById('security-alert');
-        alertBox.style.display = 'block';
-        setTimeout(() => alertBox.style.display = 'none', 2500);
-        return false;
-    }
-    
-    setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
-
-    function makeDraggable(elmnt) {
-        let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
-        const head = elmnt.querySelector(".win-header");
-        head.onmousedown = (e) => {
-            p3 = e.clientX; p4 = e.clientY;
-            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-            document.onmousemove = (e) => {
-                p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY;
-                elmnt.style.top = (elmnt.offsetTop - p2) + "px";
-                elmnt.style.left = (elmnt.offsetLeft - p1) + "px";
+                    resized.forEach(d => {
+                        const match = faceMatcher.findBestMatch(d.descriptor);
+                        if (match.label !== 'unknown') {
+                            const emo = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+                            logAccess(match.label, emo);
+                        }
+                    });
+                }, 150);
+                status.innerText = "STATUS: GATEWAY_ACTIVE";
             };
-        };
+        } catch (err) {
+            alert("CAMERA_ACCESS_DENIED: Please click the 'Lock' icon in your URL bar and allow Camera.");
+            console.error(err);
+        }
+    }
+
+    async function createMatcher() {
+        const descriptors = await Promise.all(authorized.map(async label => {
+            try {
+                const img = await faceapi.fetchImage(`./${label}.png`);
+                const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+                return new faceapi.LabeledFaceDescriptors(label, [det.descriptor]);
+            } catch (e) { return null; }
+        }));
+        return new faceapi.FaceMatcher(descriptors.filter(d => d !== null), 0.6);
+    }
+
+    function logAccess(name, emotion) {
+        if (attendanceData.length > 0 && attendanceData[0].name === name) return;
+        
+        const entry = { name: name.toUpperCase(), emotion: emotion.toUpperCase(), time: new Date().toLocaleTimeString() };
+        attendanceData.unshift(entry);
+        
+        document.getElementById('attendance-list').innerHTML = 
+            `<div style="color: var(--green)">> [${entry.time}] ${entry.name} IDENTIFIED // MOOD: ${entry.emotion}</div>` 
+            + document.getElementById('attendance-list').innerHTML;
+        
+        const key = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+        if(emotionCounts[key] !== undefined) emotionCounts[key]++;
+        chart.update();
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('emotionChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'pie',
+            data: { 
+                labels: Object.keys(emotionCounts), 
+                datasets: [{ data: Object.values(emotionCounts), backgroundColor: ['#00ff41', '#ffcc66', '#ff4500', '#ff0000', '#007bff'] }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#00ff41' } } } }
+        });
     }
 </script>
 </body>
