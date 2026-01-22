@@ -192,7 +192,9 @@
         }
     });
 
-    // --- GUEST LOGIC ---
+    // ============================================================================
+    // START: GUEST LOGIC (ONLY EDIT THIS PART FOR GUEST FEATURES)
+    // ============================================================================
     async function initGuestOS() {
         initChart();
         const status = document.getElementById('scan-status');
@@ -297,6 +299,9 @@
         a.setAttribute('download', 'Bus45_Attendance.csv');
         a.click();
     }
+    // ============================================================================
+    // END: GUEST LOGIC
+    // ============================================================================
 
     // --- ADMIN LOGIC (ORIGINAL) ---
     function startAdminOS() {
