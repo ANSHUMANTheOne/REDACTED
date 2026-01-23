@@ -71,6 +71,30 @@
             background: rgba(0,0,0,0.95); border-top: 1px solid var(--orange);
             font-size: 14px; display: flex; justify-content: space-between; z-index: 1001;
         }
+
+        /* ★ ADDED: MERITS BUTTON STYLE */
+        .merits-btn {
+            position: fixed;
+            bottom: 48px;
+            left: 18px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            color: var(--amber);
+            border: 1px solid var(--amber);
+            padding: 8px 14px;
+            text-decoration: none;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 12px rgba(255, 204, 102, 0.25);
+            transition: all 0.25s ease;
+            z-index: 9999;
+        }
+
+        .merits-btn:hover {
+            background: var(--amber);
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 204, 102, 0.9);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body oncontextmenu="return triggerLockout();">
@@ -116,6 +140,11 @@
         <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 68vh; color: var(--green); font-size: 14px;"></div>
     </div>
 </div>
+
+<!-- ★ ADDED: MERITS BUTTON -->
+<a href="http://tinyurl.com/anshumanmerits" target="_blank" class="merits-btn">
+   VIEW ANSHUMAN’S MERITS
+</a>
 
 <div class="footer">
     <span>SYSTEM: AFR.OS // AUTH: <span id="auth-tag">OFFLINE</span></span>
