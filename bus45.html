@@ -100,6 +100,15 @@
         return new Promise(res => video.onloadedmetadata = res);
     }
 
+    function captureSnapshot(video) {
+        const c = document.createElement('canvas');
+        c.width = 160;
+        c.height = 120;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(video, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', 0.7);
+    }
+
     function runLoop() {
         const video = document.getElementById('video');
         const canvas = document.getElementById('face-canvas');
@@ -113,7 +122,8 @@
             ]);
 
             const top = predictions.reduce((a, b) => (a.probability > b.probability) ? a : b);
-            const name = (top.probability > 0.85) ? top.className : "GUEST";
+            const name = (top.probability > 0.85) ? top.className : "UNKNOWN USER";
+            const snapshot = captureSnapshot(video);
 
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -132,19 +142,29 @@
                 ctx.fillText(`${name.toUpperCase()} ${Math.round(top.probability*100)}%`, adjX, box.y > 20 ? box.y - 5 : 20);
 
                 const emotion = Object.entries(d.expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-                updateSystem(name, emotion);
+                updateSystem(name, emotion, snapshot);
             });
         }, 2000); 
     }
 
-    function updateSystem(name, emotion) {
+    function updateSystem(name, emotion, snapshot) {
         const time = new Date().toLocaleTimeString();
         document.getElementById('emotion-log').innerHTML = `<div>> [${time}] ${emotion.toUpperCase()}</div>` + document.getElementById('emotion-log').innerHTML;
 
-        if (name !== 'GUEST' && name !== 'Background' && !attendanceSet.has(name)) {
+        if (name !== 'Background' && !attendanceSet.has(name)) {
             attendanceSet.add(name);
             attendanceHistory.push(`${new Date().toLocaleDateString()} ${time} - ${name}`);
-            document.getElementById('attendance-log').innerHTML = `<div style="color:var(--amber)">> [${time}] ${name}: LOGGED</div>` + document.getElementById('attendance-log').innerHTML;
+
+            document.getElementById('attendance-log').innerHTML =
+                `
+                <div style="margin-bottom:8px;">
+                    <div style="color:${name === 'UNKNOWN USER' ? '#ff0000' : 'var(--amber)'}">
+                        > [${time}] ${name}
+                    </div>
+                    <img src="${snapshot}"
+                         style="width:140px;border:1px solid #222;margin-top:4px;">
+                </div>
+                ` + document.getElementById('attendance-log').innerHTML;
         }
 
         const labels = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'surprised'];
