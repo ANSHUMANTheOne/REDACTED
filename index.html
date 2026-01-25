@@ -72,7 +72,6 @@
             font-size: 14px; display: flex; justify-content: space-between; z-index: 1001;
         }
 
-        /* ★ ADDED: MERITS BUTTON STYLE */
         .merits-btn {
             position: fixed;
             bottom: 48px;
@@ -98,6 +97,77 @@
     </style>
 </head>
 <body oncontextmenu="return triggerLockout();">
+
+<!-- ★ INSERT AFR INTRO SCREEN HERE -->
+    <!-- AFR INTRO SCREEN -->
+<div id="afr-intro">
+    <div id="afr-title"></div>
+    <div id="afr-full">Anshuman’s Frontier Research</div>
+    <div id="afr-boot">INITIALIZING CORE SYSTEMS…</div>
+</div>
+
+<style>
+    #afr-intro {
+        position: fixed;
+        inset: 0;
+        background: black;
+        z-index: 20000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    #afr-title {
+        font-size: 140px;
+        letter-spacing: 18px;
+        color: #ff4500;
+        text-shadow: 0 0 30px #ff4500;
+    }
+
+    #afr-full {
+        font-size: 28px;
+        margin-top: 12px;
+        color: #ffcc66;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+    }
+
+    #afr-boot {
+        margin-top: 26px;
+        font-size: 18px;
+        color: #00ff41;
+        opacity: 0.8;
+    }
+</style>
+
+<script>
+    const afrText = "AFR";
+    let afrIndex = 0;
+    const afrTitle = document.getElementById("afr-title");
+    const afrFull = document.getElementById("afr-full");
+
+    const afrType = setInterval(() => {
+        afrTitle.textContent += afrText[afrIndex];
+        afrIndex++;
+        if (afrIndex === afrText.length) {
+            clearInterval(afrType);
+            setTimeout(() => afrFull.style.opacity = "1", 300);
+        }
+    }, 420);
+
+    window.addEventListener("load", () => {
+        setTimeout(() => {
+            const intro = document.getElementById("afr-intro");
+            intro.style.transition = "opacity 1s ease";
+            intro.style.opacity = "0";
+            setTimeout(() => intro.remove(), 1000);
+        }, 3200);
+    });
+</script>
+
+    
 
 <div id="security-alert">FORGING IS UNAUTHORIZED // ACCESS LOGGED</div>
 
@@ -141,7 +211,6 @@
     </div>
 </div>
 
-<!-- ★ ADDED: MERITS BUTTON -->
 <a href="http://tinyurl.com/anshumanmerits" target="_blank" class="merits-btn">
    VIEW ANSHUMAN’S MERITS
 </a>
