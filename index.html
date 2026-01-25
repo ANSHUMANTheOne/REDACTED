@@ -25,19 +25,9 @@
             background: repeating-linear-gradient(to bottom, rgba(255,69,0,0.08) 0px, transparent 2px);
         }
 
-        /* UPDATED: subtle, gradual gradient (no pulse) */
         #login-screen {
-            position: fixed; inset: 0;
-            background: radial-gradient(circle at center, #1a0500 0%, #070200 70%, #000 100%);
-            z-index: 5000;
+            position: fixed; inset: 0; background: black; z-index: 5000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            animation: gradientShift 20s ease-in-out infinite;
-        }
-
-        @keyframes gradientShift {
-            0% { background-position: 50% 50%; }
-            50% { background-position: 60% 40%; }
-            100% { background-position: 50% 50%; }
         }
 
         input {
@@ -64,53 +54,50 @@
             font-size: 32px; border: 4px solid white; text-align: center; font-weight: bold;
         }
 
-        /* AFR INTRO */
-        #afr-intro {
+        #surveillance-visual {
+            width: 100%; height: 180px; background: #000; position: relative; overflow: hidden;
+            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+        }
+        .scan-line { width: 100%; height: 2px; background: rgba(255,255,255,0.1); position: absolute; top: 0; animation: scanMove 4s linear infinite; }
+        @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
+
+        #map-area { width: 100%; height: 220px; background: #050505; position: relative; border: 1px solid #331100; background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); }
+        .pulse-dot { position: absolute; width: 14px; height: 14px; background: var(--red); border-radius: 50%; box-shadow: 0 0 20px var(--red); animation: ping 1.2s infinite; }
+        @keyframes ping { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
+
+        .footer {
+            position: fixed; bottom: 0; width: 100%; padding: 6px 20px;
+            background: rgba(0,0,0,0.95); border-top: 1px solid var(--orange);
+            font-size: 14px; display: flex; justify-content: space-between; z-index: 1001;
+        }
+
+        /* ★ ADDED: MERITS BUTTON STYLE */
+        .merits-btn {
             position: fixed;
-            inset: 0;
-            background: black;
-            z-index: 20000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        #afr-title {
-            font-size: 140px;
-            letter-spacing: 18px;
-            color: var(--orange);
-            text-shadow: 0 0 30px var(--orange);
-        }
-
-        #afr-full {
-            font-size: 28px;
-            margin-top: 12px;
-            color: var(--amber);
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
-
-        #afr-boot {
-            margin-top: 26px;
+            bottom: 48px;
+            left: 18px;
+            font-family: 'VT323', monospace;
             font-size: 18px;
-            color: var(--green);
-            opacity: 0.8;
+            color: var(--amber);
+            border: 1px solid var(--amber);
+            padding: 8px 14px;
+            text-decoration: none;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 12px rgba(255, 204, 102, 0.25);
+            transition: all 0.25s ease;
+            z-index: 9999;
         }
 
-        /* (REST OF YOUR ORIGINAL STYLES CONTINUE UNCHANGED) */
+        .merits-btn:hover {
+            background: var(--amber);
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 204, 102, 0.9);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
-
 <body oncontextmenu="return triggerLockout();">
-
-<!-- AFR INTRO SCREEN -->
-<div id="afr-intro">
-    <div id="afr-title"></div>
-    <div id="afr-full">Anshuman’s Frontier Research</div>
-    <div id="afr-boot">INITIALIZING CORE SYSTEMS…</div>
-</div>
 
 <div id="security-alert">FORGING IS UNAUTHORIZED // ACCESS LOGGED</div>
 
@@ -121,35 +108,139 @@
 
 <div class="overlay-scan"></div>
 
-<!-- EVERYTHING BELOW IS YOUR ORIGINAL HTML + JS, UNTOUCHED -->
+<div class="desktop" id="main-desktop">
+    <div class="win" id="w-admin" style="bottom: 70px; right: 20px; width: 320px;">
+        <div class="win-header" style="background:rgba(255, 204, 102, 0.3);">ADMIN_MONITOR // AUTH_LEVEL_10</div>
+        <div class="win-body" style="color: var(--amber);">
+            NAME: <span style="background: var(--amber); color: black;">Anshuxxx xxxxxxxx</span><br>
+            ROLE: <span style="color: var(--red);">SUPREME_ADMIN</span><br>
+            AUTH: VERIFIED [AFR_FED_ORG]
+        </div>
+    </div>
+    <div class="win" id="w-tracker" style="top: 10%; left: 360px; width: 450px;">
+        <div class="win-header">AFR_SATELLITE // LIVE_INTERCEPT</div>
+        <div class="win-body">
+            <div id="map-area"><div class="pulse-dot" id="target-dot"></div></div>
+            <div style="margin-top: 12px; font-size: 15px;">
+                LOCATING: <span id="target-name" style="color: var(--amber);">SCANNING...</span><br>
+                GEO: <span id="target-coords">25.2048° N, 55.2708° E</span>
+            </div>
+        </div>
+    </div>
+    <div class="win" id="w-cam" style="top: 20px; left: 20px; width: 320px;">
+        <div class="win-header">SATELLITE_FEED // GLOBAL</div>
+        <div class="win-body"><div id="surveillance-visual"><div class="scan-line"></div></div></div>
+    </div>
+    <div class="win" id="w-log" style="bottom: 70px; left: 20px; width: 450px;">
+        <div class="win-header">TERMINAL_LOG</div>
+        <div class="win-body"><div id="hacker-log" style="color: var(--green); height: 130px; overflow: hidden; font-size: 13px;"></div></div>
+    </div>
+    <div class="win" id="w-list" style="top: 20px; right: 20px; width: 280px; height: 75vh;">
+        <div class="win-header">WHITELIST</div>
+        <div id="personnel-list" class="win-body" style="overflow-y: auto; height: 68vh; color: var(--green); font-size: 14px;"></div>
+    </div>
+</div>
 
-<!-- … (your entire desktop, windows, merits button, footer, etc remain exactly the same) … -->
+<!-- ★ ADDED: MERITS BUTTON -->
+<a href="http://tinyurl.com/anshumanmerits" target="_blank" class="merits-btn">
+   VIEW ANSHUMAN’S MERITS
+</a>
+
+<div class="footer">
+    <span>SYSTEM: AFR.OS // AUTH: <span id="auth-tag">OFFLINE</span></span>
+    <span id="sys-time">TIME: 00:00:00</span>
+</div>
 
 <script>
-/* AFR INTRO TYPING EFFECT */
-const afrText = "AFR";
-let afrIndex = 0;
-const afrTitle = document.getElementById("afr-title");
-const afrFull = document.getElementById("afr-full");
+    const adminPass = "A$N#H";
+    const guestPass = "guest";
+    const classmates = ["MOKSH PRASHANTKUMAR SUTHAR", "MOOSA KHAN", "NAVANEETH PAYYADAKKATH", "PAYAS KULHARI", "RAYAN NIBU", "SAI TEJ SIDDHARTH AKULA", "SANJIT SURESH KUMAR", "ABHIRAM E. PANAYANTHATTA", "ADHISH JACOB ANIL", "ADIL ASLAM ALI CHILWAN", "ADITYA KARAN HARCHAND", "AROMAL AYYAPPAN SAMBAJI", "ARYAN MANDE", "HARIHARA GOMATHINATHAN", "ISHAN S. R. K. BEHERA", "ISIT S. R. K. BEHERA", "JONATHAN RAJ", "MOHAMMED IYAD ISMAIL KHAN", "MOHAMMED RAYHAN", "MOHAMMED RAYYAN KHAN", "ZAEEM"];
 
-const afrType = setInterval(() => {
-    afrTitle.textContent += afrText[afrIndex];
-    afrIndex++;
-    if (afrIndex === afrText.length) {
-        clearInterval(afrType);
-        setTimeout(() => afrFull.style.opacity = "1", 300);
+    document.getElementById('passInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const val = this.value;
+            if (val === adminPass) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-desktop').style.display = 'block';
+                document.getElementById('auth-tag').innerText = "ADMIN_ANSHU";
+                startAdminOS();
+            } else if (val === guestPass) {
+                startGuestBoot();
+            } else {
+                triggerLockout();
+                this.value = "";
+            }
+        }
+    });
+
+    function startGuestBoot() {
+        const login = document.getElementById('login-screen');
+        login.innerHTML = `
+            <h1 style="font-size:50px; letter-spacing:15px; color:#00ff41;">[ AFR.OS // KERNEL_HANDOFF ]</h1>
+            <div id="boot-log" style="margin-top:25px; font-size:24px; color:#00ff41; width:600px; text-align:left;"></div>
+        `;
+        const logs = ["AUTH_GUEST: VERIFIED", "ADMIN_KERNEL: ISOLATED", "UNMOUNTING_CORE_MODULES", "SPAWNING BUS_45_SANDBOX", "LOADING_AI_DRIVERS", "HANDOFF_COMPLETE"];
+        const logBox = document.getElementById("boot-log");
+        let i = 0;
+        const interval = setInterval(() => {
+            logBox.innerHTML += `> ${logs[i]}<br>`;
+            i++;
+            if (i === logs.length) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    window.open("./bus45.html", "_blank");
+                    location.reload(); 
+                }, 800);
+            }
+        }, 450);
     }
-}, 420);
 
-window.addEventListener("load", () => {
-    setTimeout(() => {
-        const intro = document.getElementById("afr-intro");
-        intro.style.transition = "opacity 1s ease";
-        intro.style.opacity = "0";
-        setTimeout(() => intro.remove(), 1000);
-    }, 3200);
-});
+    function startAdminOS() {
+        const list = document.getElementById('personnel-list');
+        list.innerHTML = ""; 
+        classmates.forEach(name => { list.innerHTML += `> ${name}<br>`; });
+        document.querySelectorAll('.win').forEach(makeDraggable);
+        setInterval(updateTracking, 3500);
+        setInterval(updateLog, 1500);
+    }
+
+    function updateTracking() {
+        const name = classmates[Math.floor(Math.random() * classmates.length)];
+        document.getElementById('target-name').innerText = name;
+        const dot = document.getElementById('target-dot');
+        dot.style.left = Math.random() * 90 + "%"; 
+        dot.style.top = Math.random() * 80 + "%";
+    }
+
+    function updateLog() {
+        const log = document.getElementById('hacker-log');
+        const msgs = ["MEM_SCAN: OK", "SSH_BYPASS: OK", "SATELLITE_LNK: OK", "UPLINK_STABLE", "GEO_SYNC_ACTIVE"];
+        log.innerHTML += `[${new Date().toLocaleTimeString()}] ${msgs[Math.floor(Math.random()*msgs.length)]}<br>`;
+        if (log.innerHTML.split('<br>').length > 10) log.innerHTML = log.innerHTML.split('<br>').slice(1).join('<br>');
+    }
+
+    function triggerLockout() {
+        const alertBox = document.getElementById('security-alert');
+        alertBox.style.display = 'block';
+        setTimeout(() => alertBox.style.display = 'none', 2500);
+        return false;
+    }
+
+    function makeDraggable(elmnt) {
+        let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+        const head = elmnt.querySelector(".win-header");
+        head.onmousedown = (e) => {
+            p3 = e.clientX; p4 = e.clientY;
+            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+            document.onmousemove = (e) => {
+                p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - p2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - p1) + "px";
+            };
+        };
+    }
+
+    setInterval(() => { document.getElementById('sys-time').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
 </script>
-
 </body>
 </html>
