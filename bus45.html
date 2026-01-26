@@ -122,7 +122,7 @@
             ]);
 
             const top = predictions.reduce((a, b) => (a.probability > b.probability) ? a : b);
-            const name = (top.probability > 0.85) ? top.className : "UNKNOWN USER";
+            const name = (top.probability > 0.75) ? top.className : "UNKNOWN USER";
             const snapshot = captureSnapshot(video);
 
             const ctx = canvas.getContext('2d');
