@@ -2,7 +2,7 @@
 // Self-contained add-on: nothing in the existing views is modified.
 import {parseFits,spectralProject,worldToPixel,outputToWorld} from './sky-engine.js';
 import {findMovers} from './mover-finder.js';
-const API=location.pathname.startsWith('/omniscope')?'/omniscope/api':'/api';
+const API=(location.hostname.endsWith('github.io')?'https://beaconofunity.com/omniscope/api':location.pathname.startsWith('/omniscope')?'/omniscope/api':'/api');
 // To add a new SPHEREx data release, append its IRSA collection name here (archive.js accepts spherex_qrN[_deep]).
 const COLLECTIONS=['spherex_qr2','spherex_qr3','spherex_qr3_deep'];
 const DET=[[.75,1.12],[1.10,1.65],[1.63,2.43],[2.40,3.85],[3.81,4.43],[4.41,5.01]],COL=['#7aa2ff','#5fd4c4','#9be37a','#e9c46a','#f4a261','#e76f51'];

@@ -3,7 +3,7 @@ import {equatorialToScene,sceneToEquatorial,eclipticToScene,osculatingOrbit,orbi
 import {installCalmUI} from './calm-ui.js';
 import {installObservationOverlay} from './observation-overlay.js';
 import {findChangeCandidates} from './change-candidates.js';
-const API_BASE=location.pathname.startsWith('/omniscope')?'/omniscope/api':'/api';
+const API_BASE=(location.hostname.endsWith('github.io')?'https://beaconofunity.com/omniscope/api':location.pathname.startsWith('/omniscope')?'/omniscope/api':'/api');
 
 const DETECTORS=[[.75,1.12],[1.10,1.65],[1.63,2.43],[2.40,3.85],[3.81,4.43],[4.41,5.01]];
 const MAPS={color:{file:'wise-color.jpg',name:'AllWISE RGB',wave:'3.4 / 4.6 / 12 μm',color:0xffffff},j:{file:'sky-j.jpg',name:'2MASS J',wave:'1.23 μm',color:0x9fcbea},w1:{file:'sky-w1.jpg',name:'AllWISE W1',wave:'3.4 μm',color:0x9edcc8},w2:{file:'sky-w2.jpg',name:'AllWISE W2',wave:'4.6 μm',color:0xe4bd8e},w3:{file:'sky-w3.jpg',name:'AllWISE W3',wave:'12 μm',color:0xdf8a72}};

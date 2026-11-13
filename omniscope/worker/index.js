@@ -4,9 +4,26 @@ import { onRequestGet as catalog } from '../functions/api/catalog.js';
 import { onRequestPost as ask } from '../functions/api/ask.js';
 
 
+const ORIGINS = ['https://anshumantheone.github.io', 'https://beaconofunity.com'];
+const withCors = (req, res) => {
+  const o = req.headers.get('Origin');
+  if (!ORIGINS.includes(o)) return res;
+  const h = new Headers(res.headers);
+  h.set('Access-Control-Allow-Origin', o); h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS'); h.set('Access-Control-Allow-Headers', 'Content-Type');
+  return new Response(res.body, { status: res.status, headers: h });
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/omniscope/api/')) {
+      if (request.method === 'OPTIONS') return withCors(request, new Response(null, { status: 204 }));
+      return withCors(request, await this.route(request, env, url));
+    }
+    return this.route(request, env, url);
+  },
+  async route(request, env, url) {
     const path = url.pathname;
     if (path === '/omniscope') {
       url.pathname = '/omniscope/';
