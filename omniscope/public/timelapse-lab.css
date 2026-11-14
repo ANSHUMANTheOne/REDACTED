@@ -31,3 +31,15 @@
 #tlLab .tl-map{display:flex;flex-direction:column;gap:3px}#tlLab .tl-all{padding:5px 8px;font-size:11px;align-self:flex-start}#tlLab .tl-all.on{background:#1d5b57;color:#fff}
 .tl-mrow{display:grid;grid-template-columns:22px repeat(17,1fr);gap:2px;align-items:center}.tl-mrow span{font:9px ui-monospace,monospace}
 #tlLab .tl-mrow button{height:18px;padding:0;border:0;border-radius:2px;background:var(--c);opacity:.4;cursor:pointer}#tlLab .tl-mrow button:hover{opacity:.85}#tlLab .tl-mrow button.on{opacity:1;outline:2px solid #fff;outline-offset:1px}
+
+
+#tlLab .tl-frame-details{font-size:12px;color:#a9c5cc;margin:8px 0}
+#tlLab .tl-frame-details summary{cursor:pointer}
+@media (pointer:coarse){
+ #tlLab .tl-x,#tlLab #tlPlay,#tlLab #tlFps,#tlLab .tl-chips button,#tlLab .tl-row button,#tlLab .tl-main{min-height:44px}
+ #tlLab .tl-x,#tlLab #tlPlay{min-width:44px}
+ #tlLab input:not([type=checkbox]),#tlLab select{font-size:16px}
+ #tlLab #tlSlide{min-height:44px}
+ #tlLab .tl-map button{min-height:28px}
+ #tlLab .tl-frame-details summary{padding:10px 0}
+}

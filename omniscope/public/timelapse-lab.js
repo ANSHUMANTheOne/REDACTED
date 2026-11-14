@@ -20,8 +20,8 @@ const btn=Object.assign(document.createElement('button'),{id:'tlOpen',textConten
 root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
 <ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Open sky field”.</span></div></div>
-<div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" type="range" min="0" max="0" value="0"><select id="tlFps"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
-<div id="tlInfo" class="tl-info">Pick a target to begin.</div><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
+<div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" aria-label="Observation timeline" type="range" min="0" max="0" value="0"><select id="tlFps" aria-label="Playback speed"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
+<div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
 <div class="tl-row"><input id="tlRa" type="number" step="any" placeholder="RA °"><input id="tlDec" type="number" step="any" placeholder="Dec °"></div>
@@ -86,13 +86,20 @@ function build(current=groups[k]?.m[0]){
 const gray=v=>{const u=Math.max(0,Math.min(1,(v+1)/9));return Math.asinh(u*12)/Math.asinh(12)};
 function paint(z,tint,alpha,diff,ctx){const o=new ImageData(N,N);for(let i=0;i<N*N;i++){const v=z[i];if(v!==v)continue;const j=i*4;if(diff){const a=Math.min(1,Math.asinh(Math.abs(v)/2)/Math.asinh(12));o.data[j]=v>0?40+215*a:20;o.data[j+1]=30+90*a;o.data[j+2]=v<0?40+215*a:20}else{const g=gray(v)*255;o.data[j]=g*tint[0];o.data[j+1]=g*tint[1];o.data[j+2]=g*tint[2]}o.data[j+3]=255*alpha}
  const c=document.createElement('canvas');c.width=c.height=N;c.getContext('2d').putImageData(o,0,0);ctx.drawImage(c,0,0)}
+function releaseName(url){
+ const release=String(url).match(/[/]spherex[/](dr|qr)([0-9]+)[/]/i);
+ return release?release[1].toUpperCase()+release[2]:'SPHEREx Level 2';
+}
 function draw(){
  if(!groups.length)return;const ctx=$('#tlImg').getContext('2d'),g=groups[k],mode=$('#tlMode').value;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#02060b';ctx.fillRect(0,0,N,N);let note='';
  if(mode==='trail'){ctx.globalCompositeOperation='lighter';for(let j=Math.max(0,k-5);j<k;j++)paint(groups[j].z,[1,.55,.2],.18+.1*(j-(k-5)),0,ctx);paint(g.z,[.6,1,1],1,0,ctx);note=' · orange = earlier, cyan = now'}
  else if(mode==='sum'){paint(mean(groups.slice(0,k+1).filter(x=>x.det===g.det||!g.det).map(x=>x.z)),[1,1,1],1,0,ctx);note=' · running mean of epochs 1–'+(k+1)}
  else if(mode==='first'||mode==='prev'){const same=groups.filter((x,i)=>i<k&&x.det===g.det),ref=mode==='first'?same[0]:same.at(-1);if(!ref||!g.det)paint(g.z,[1,1,1],1,0,ctx),note=' · no earlier same-detector epoch to subtract';else{const d=new Float32Array(N*N);for(let i=0;i<d.length;i++)d[i]=g.z[i]-ref.z[i];paint(d,0,1,1,ctx);note=` · red brighter now, blue brighter before (vs ${iso(ref.t)})`}}
  else paint(g.z,[1,1,1],1,0,ctx);
- $('#tlSlide').value=k;set(`Epoch ${k+1}/${groups.length} · ${iso(g.t)} · ${g.det?'D'+g.det:'mixed D'} · ${g.m.length} exposure${g.m.length>1?'s':''}${note}`);overlay()}
+ $('#tlSlide').value=k;
+ const releases=[...new Set(g.m.map(frame=>releaseName(frame.url)))].join(' + ');
+ $('#tlFrameSource').textContent='Observed '+iso(g.t)+' UTC · '+releases+'. '+(releases.includes('DR1')?'NASA/IPAC announced DR1 on 12 November 2026.':'');
+ set(`Epoch ${k+1}/${groups.length} · ${iso(g.t)} · ${g.det?'D'+g.det:'mixed D'} · ${g.m.length} exposure${g.m.length>1?'s':''}${note}`);overlay()}
 function toPx(ra,dec){const [x,y]=worldToPixel(hdr,ra,dec);return [x,y]}
 function overlay(){
  const c=$('#tlOv'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);if(!groups.length)return;const t=groups[k].t,Y=yr(t),S=2,dr=(r,ep,pm)=>[r.ra+(pm[0]||0)*(Y-ep)/3.6e6/Math.cos(r.dec*Math.PI/180),r.dec+(pm[1]||0)*(Y-ep)/3.6e6];
@@ -120,11 +127,13 @@ root.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const p=PRESETS
  target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
  $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';loadAll()});
-$('#tlLink').onclick=()=>{const q=new URLSearchParams({lab:1,ra:$('#tlRa').value,dec:$('#tlDec').value,fov:$('#tlFov').value,det:$('#tlDet').value,mode:$('#tlMode').value});if($('#tlBand').value)q.set('band',$('#tlBand').value);const u=location.origin+location.pathname+'?'+q;navigator.clipboard?.writeText(u);set('Share link copied: '+u)};
+$('#tlLink').onclick=()=>{const q=new URLSearchParams({lab:1,ra:$('#tlRa').value,dec:$('#tlDec').value,fov:$('#tlFov').value,det:$('#tlDet').value,mode:$('#tlMode').value,stack:$('#tlBin').value,gaia:Number($('#tlGaia').checked),wise:Number($('#tlWise').checked),flags:Number($('#tlFlag').checked)});if($('#tlBand').value)q.set('band',$('#tlBand').value);const u=location.origin+location.pathname+'?'+q;navigator.clipboard?.writeText(u);set('Share link copied: '+u)};
 $('#tlPng').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=N*2;const c=o.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage($('#tlImg'),0,0,N*2,N*2);c.drawImage($('#tlOv'),0,0);Object.assign(document.createElement('a'),{href:o.toDataURL(),download:`omniscope-${field?.ra?.toFixed(3)}_${field?.dec?.toFixed(3)}.png`}).click()};
 const q=new URLSearchParams(location.search);
-if(q.get('lab')||q.has('ra')){for(const [p,id] of [['ra','#tlRa'],['dec','#tlDec'],['fov','#tlFov'],['det','#tlDet'],['band','#tlBand'],['mode','#tlMode'],['name','#tlName']])if(q.has(p))$(id).value=q.get(p);
- addEventListener('load',()=>{root.showModal();if(q.has('ra')&&q.has('dec'))loadAll();else if(q.get('name'))$('#tlRes').click()})}
+if(q.get('lab')||q.has('ra')){for(const [p,id] of [['ra','#tlRa'],['dec','#tlDec'],['fov','#tlFov'],['det','#tlDet'],['band','#tlBand'],['mode','#tlMode'],['name','#tlName'],['stack','#tlBin']])if(q.has(p))$(id).value=q.get(p);
+ for(const [param,id] of [['gaia','#tlGaia'],['wise','#tlWise'],['flags','#tlFlag']])if(q.has(param))$(id).checked=q.get(param)==='1';
+ const openShared=()=>{if(!root.open)root.showModal();if(q.has('ra')&&q.has('dec'))loadAll();else if(q.get('name'))$('#tlRes').click()};
+ if(document.readyState==='complete')queueMicrotask(openShared);else addEventListener('load',openShared,{once:true});}
 export function openComparison(data) {
  if(busy || data.exposures.length<2) {
   if(!root.open) root.showModal();
