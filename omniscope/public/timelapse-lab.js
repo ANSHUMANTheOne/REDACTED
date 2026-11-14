@@ -21,7 +21,7 @@ root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
 <ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Open sky field”.</span></div></div>
 <div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" aria-label="Observation timeline" type="range" min="0" max="0" value="0"><select id="tlFps" aria-label="Playback speed"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
-<div class="tl-row tl-dates"><button id="tlPrev" aria-label="Previous observation" disabled>‹</button><select id="tlDates" aria-label="Date taken (UTC)" disabled><option>Date taken (UTC)</option></select><button id="tlNext" aria-label="Next observation" disabled>›</button></div><div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
+<p id="tlReleaseNote" class="tl-info" hidden>DR1 announced November 12, 2026. The timeline shows when each image was taken.</p><div class="tl-row tl-dates"><button id="tlPrev" aria-label="Previous observation" disabled>‹</button><select id="tlDates" aria-label="Date taken (UTC)" disabled><option>Date taken (UTC)</option></select><button id="tlNext" aria-label="Next observation" disabled>›</button></div><div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
 <div class="tl-row"><input id="tlRa" type="number" step="any" placeholder="RA °"><input id="tlDec" type="number" step="any" placeholder="Dec °"></div>
@@ -66,7 +66,7 @@ async function sia(ra,dec,detector){
 async function loadAll(showLatest=false,keepPreview=false){
  if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
- busy=1;datePicked=false;$('#tlLoad').disabled=true;stop();if(!keepPreview){frames=[];groups=[];}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
+ busy=1;datePicked=false;$('#tlLoad').disabled=true;stop();if(!keepPreview){frames=[];groups=[];$('#tlReleaseNote').hidden=true;}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
  try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d);
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
@@ -195,6 +195,7 @@ export async function openReleasePreview(){
   busy=0;
   openComparison({field:{ra,dec},fov,detector:3,exposures:[{sample,t,url:'https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2026W19_1A/l2b-v27-2026-245/3/level2_2026W19_1A_0403_1D3_spx_l2b-v27-2026-245.fits'}]});
   $('#tlName').value="Barnard's Star";
+  $('#tlReleaseNote').hidden=false;
   set("Barnard’s Star · DR1 · observed "+iso(t)+" UTC");
  }catch(error){set(error.message,1);}
  finally{busy=0;$('#tlLoad').disabled=false;}
@@ -220,6 +221,7 @@ export function openComparison(data) {
   return;
  }
  stop();
+ $('#tlReleaseNote').hidden=true;
  const {ra,dec}=data.field,fov=data.fov;
  field={ra,dec,fov};
  hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};

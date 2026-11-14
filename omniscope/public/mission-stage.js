@@ -9,7 +9,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  <div id="stageBandSlot"></div>
  <details class="stage-visit-details"><summary id="visitSummary">03 / OBSERVATIONS <span>Using the first two visits</span></summary><div class="mission-stage-pickers"><label>Earlier visit<select id="stageDateA" aria-label="Earlier observation date"></select></label><label>Later visit<select id="stageDateB" aria-label="Later observation date"></select></label></div></details>
  <div class="mission-stage-actions"><button id="stageTimeLapse" class="stage-primary">▶ Time-lapse</button><button id="stageVisit" class="stage-secondary">Compare images</button></div>
- <button id="stageLatest" class="stage-latest" type="button">About Data Release 1 <span aria-hidden="true">↗</span></button>
+ <button id="stageLatest" class="stage-latest" type="button">View Data Release 1 <span aria-hidden="true">↗</span></button>
  <div class="mission-stage-readout" aria-live="off"><strong id="stageWave">Measured wavelength will appear here.</strong><span id="stageTime">Loading the selected visits…</span><span id="stageCoords">Recorded spacecraft position loads with each image.</span></div>
  <p class="mission-stage-note">Position from FITS metadata. Diagram not to scale.</p>`;
  ui.appendChild(stage);
@@ -60,17 +60,10 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  };
  toggle.before(timeLapse);
  stageTimeLapse.onclick=timeLapse.onclick;
- const releaseNotice=$('releaseNotice');
  $('stageLatest').onclick=async()=>{
-  if(releaseNotice){releaseNotice.returnValue='';releaseNotice.showModal();return;}
   const lab=await import('./timelapse-lab.js');
   lab.openReleasePreview();
  };
- releaseNotice?.addEventListener('close',async()=>{
-  if(releaseNotice.returnValue!=='view')return;
-  const lab=await import('./timelapse-lab.js');
-  lab.openReleasePreview();
- });
  const cardReplay=document.createElement('button');cardReplay.id='missionReplay';cardReplay.type='button';cardReplay.textContent='▶ Motion preview';cardReplay.title='Replay both recorded exposures';cardReplay.setAttribute('aria-label','Replay observation');cardReplay.setAttribute('aria-pressed','false');toggle.before(cardReplay);
  toggle.hidden=false;
  card.classList.add('is-collapsed');
