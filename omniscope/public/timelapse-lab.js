@@ -43,7 +43,7 @@ const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
 async function api(path,asJson=1){const r=await fetch(API+path,{signal:AbortSignal.timeout(70000)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
 async function sia(ra,dec){const out=new Map();await Promise.all(COLLECTIONS.map(async c=>{try{const r=await fetch(API+'/archive?'+new URLSearchParams({ra,dec,collection:c}),{signal:AbortSignal.timeout(12000)});if(!r.ok)return;const d=new DOMParser().parseFromString(await r.text(),'application/xml'),f=[...d.getElementsByTagName('FIELD')].map(x=>x.getAttribute('name'));for(const tr of d.getElementsByTagName('TR')){const o=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[f[i],td.textContent]));if(o.access_url&&Number.isFinite(+o.t_min))out.set(o.access_url,o)}}catch{}}));return [...out.values()].sort((a,b)=>a.t_min-b.t_min)}
-async function loadAll(){
+async function loadAll(showLatest=false){
  if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
  busy=1;$('#tlLoad').disabled=true;stop();frames=[];groups=[];cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=false;$('#tlSlide').max=0;$('#tlSlide').value=0;overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
@@ -66,7 +66,7 @@ async function loadAll(){
    if(frames.length>lastPublished&&(groups.length<2||frames.length-lastPublished>=4))publish();
    $('#tlBusy').textContent=`Loading exposures ${done}/${rows.length}`}}));
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  publish();fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
+  publish();if(showLatest&&!timer&&groups.length){k=groups.length-1;draw();}fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
  catch(e){set(e.message,1);$('#tlBusy').hidden=true}finally{busy=0;$('#tlLoad').disabled=false}}
 async function fetchCats(){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`).then(d=>{cats[s]=d.rows;overlay()}).catch(()=>{cats[s]=[];});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
@@ -123,10 +123,18 @@ for(const id of ['#tlMode','#tlBin','#tlBand','#tlFlag'])$(id).onchange=()=>{bui
 $('#tlLoad').onclick=()=>{target=null;loadAll()};
 async function resolve(name){const d=await api('/catalog?name='+encodeURIComponent(name));return d}
 $('#tlRes').onclick=async()=>{try{const d=await resolve($('#tlName').value);$('#tlRa').value=d.ra.toFixed(6);$('#tlDec').value=d.dec.toFixed(6);target=null;set('Resolved '+$('#tlName').value)}catch(e){set(e.message,1)}};
-root.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const p=PRESETS[b.dataset.p];let {ra,dec}=p;if(p.q)try{({ra,dec}=await resolve(p.q))}catch{}
+async function openPreset(index,showLatest=false){if(busy)return;const p=PRESETS[index];let {ra,dec}=p;if(p.q)try{({ra,dec}=await resolve(p.q))}catch{}
  target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
- $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';loadAll()});
+ $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
+root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPreset(Number(b.dataset.p)));
+export function openLatest(){
+ if(!root.open)root.showModal();
+ if(busy)return;
+ $('#tlDet').value='0';$('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
+ syncMap();
+ return openPreset(0,true);
+}
 $('#tlLink').onclick=()=>{const q=new URLSearchParams({lab:1,ra:$('#tlRa').value,dec:$('#tlDec').value,fov:$('#tlFov').value,det:$('#tlDet').value,mode:$('#tlMode').value,stack:$('#tlBin').value,gaia:Number($('#tlGaia').checked),wise:Number($('#tlWise').checked),flags:Number($('#tlFlag').checked)});if($('#tlBand').value)q.set('band',$('#tlBand').value);const u=location.origin+location.pathname+'?'+q;navigator.clipboard?.writeText(u);set('Share link copied: '+u)};
 $('#tlPng').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=N*2;const c=o.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage($('#tlImg'),0,0,N*2,N*2);c.drawImage($('#tlOv'),0,0);Object.assign(document.createElement('a'),{href:o.toDataURL(),download:`omniscope-${field?.ra?.toFixed(3)}_${field?.dec?.toFixed(3)}.png`}).click()};
 const q=new URLSearchParams(location.search);
