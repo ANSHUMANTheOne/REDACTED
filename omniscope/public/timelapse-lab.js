@@ -101,7 +101,7 @@ $('#tlLoad').onclick=()=>{target=null;loadAll()};
 async function resolve(name){const d=await api('/catalog?name='+encodeURIComponent(name));return d}
 $('#tlRes').onclick=async()=>{try{const d=await resolve($('#tlName').value);$('#tlRa').value=d.ra.toFixed(6);$('#tlDec').value=d.dec.toFixed(6);target=null;set('Resolved '+$('#tlName').value)}catch(e){set(e.message,1)}};
 root.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{const p=PRESETS[b.dataset.p];let {ra,dec}=p;if(p.q)try{({ra,dec}=await resolve(p.q))}catch{}
- target={...p,ra,dec};const dy=p.pm?25.9-p.ep:0; // centre on the expected position in late 2025
+ target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
  $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';loadAll()});
 $('#tlLink').onclick=()=>{const q=new URLSearchParams({lab:1,ra:$('#tlRa').value,dec:$('#tlDec').value,fov:$('#tlFov').value,det:$('#tlDet').value,mode:$('#tlMode').value});if($('#tlBand').value)q.set('band',$('#tlBand').value);const u=location.origin+location.pathname+'?'+q;navigator.clipboard?.writeText(u);set('Share link copied: '+u)};
