@@ -20,7 +20,7 @@ const btn=Object.assign(document.createElement('button'),{id:'tlOpen',textConten
 root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
 <ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Open sky field”.</span></div></div>
-<div class="tl-play"><button id="tlPlay">▶</button><input id="tlSlide" type="range" min="0" max="0" value="0"><select id="tlFps"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
+<div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" type="range" min="0" max="0" value="0"><select id="tlFps"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
 <div id="tlInfo" class="tl-info">Pick a target to begin.</div><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
@@ -30,7 +30,7 @@ root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx
 
 <label>Stack frames</label><select id="tlBin"><option value="0">Each exposure</option><option value="7">Add: 7-day bins</option><option value="30">Add: 30-day bins</option><option value="-1">Add: one per detector</option></select></details>
 
-<div class="tl-checks"><label><input type="checkbox" id="tlGaia" checked>Gaia DR3</label><label><input type="checkbox" id="tlWise" checked>AllWISE</label><label><input type="checkbox" id="tlFlag" checked>Mask flagged</label></div>
+<div class="tl-checks"><label><input type="checkbox" id="tlGaia">Gaia DR3</label><label><input type="checkbox" id="tlWise">AllWISE</label><label><input type="checkbox" id="tlFlag" checked>Mask flagged</label></div>
 <div class="tl-row"><button id="tlLink">Copy share link</button><button id="tlPng">Save frame</button></div>
 <p class="tl-note">Real IRSA Level 2 cutouts, registered by their WCS. Detectors are never subtracted from each other. Band edges are nominal; pixels are filtered by their true FITS wavelength. Gaia positions are moved by proper motion to each frame's date.</p></div></div>`;
 const actions = document.querySelector('.mission-stage-actions');
@@ -42,33 +42,47 @@ root.querySelector('.tl-row:has(#tlDec)').after(root.querySelector('#tlLoad'));
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
 async function api(path,asJson=1){const r=await fetch(API+path,{signal:AbortSignal.timeout(70000)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
-async function sia(ra,dec){const out=new Map();await Promise.all(COLLECTIONS.map(async c=>{try{const r=await fetch(API+'/archive?'+new URLSearchParams({ra,dec,collection:c}));if(!r.ok)return;const d=new DOMParser().parseFromString(await r.text(),'application/xml'),f=[...d.getElementsByTagName('FIELD')].map(x=>x.getAttribute('name'));for(const tr of d.getElementsByTagName('TR')){const o=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[f[i],td.textContent]));if(o.access_url&&Number.isFinite(+o.t_min))out.set(o.access_url,o)}}catch{}}));return [...out.values()].sort((a,b)=>a.t_min-b.t_min)}
+async function sia(ra,dec){const out=new Map();await Promise.all(COLLECTIONS.map(async c=>{try{const r=await fetch(API+'/archive?'+new URLSearchParams({ra,dec,collection:c}),{signal:AbortSignal.timeout(12000)});if(!r.ok)return;const d=new DOMParser().parseFromString(await r.text(),'application/xml'),f=[...d.getElementsByTagName('FIELD')].map(x=>x.getAttribute('name'));for(const tr of d.getElementsByTagName('TR')){const o=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[f[i],td.textContent]));if(o.access_url&&Number.isFinite(+o.t_min))out.set(o.access_url,o)}}catch{}}));return [...out.values()].sort((a,b)=>a.t_min-b.t_min)}
 async function loadAll(){
  if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
- busy=1;$('#tlLoad').disabled=true;stop();frames=[];groups=[];cache.clear();cats={};pin=null;movers=[];renderMovers();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
+ busy=1;$('#tlLoad').disabled=true;stop();frames=[];groups=[];cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=false;$('#tlSlide').max=0;$('#tlSlide').value=0;overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
  try{set('Searching the SPHEREx archive…');let rows=await sia(ra,dec);const d=bandSel()?.d || +$('#tlDet').value;if(d)rows=rows.filter(r=>r.energy_bandpassname===`SPHEREx-D${d}`);
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
-  const MAX=48;if(rows.length>MAX)rows=rows.filter((_,i)=>Math.floor(i*MAX/rows.length)!==Math.floor((i-1)*MAX/rows.length)||i===0||i===rows.length-1);
-  let done=0;const queue=[...rows];$('#tlBusy').hidden=false;
-  await Promise.all(Array.from({length:4},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}$('#tlBusy').textContent=`Reading cutouts ${++done}/${rows.length}`}}));
-  $('#tlBusy').hidden=true;$('#tlEmpty').hidden=true;frames.sort((a,b)=>a.t-b.t);if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  fetchCats();build();set(`${frames.length} exposures · ${iso(frames[0].t)} → ${iso(frames.at(-1).t)}`)}
+  const MAX=24;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
+  let done=0,lastPublished=0;
+  const starters=[rows[0],rows.at(-1),rows[Math.floor(rows.length/3)],rows[Math.floor(rows.length*2/3)]];
+  const queue=[...new Set([...starters,...rows])];
+  $('#tlBusy').hidden=false;
+  $('#tlBusy').textContent='Preparing the first exposures…';
+  function publish(){
+   const current=groups[k]?.m[0];
+   frames.sort((a,b)=>a.t-b.t);
+   build(current);
+   if(groups.length){$('#tlEmpty').hidden=true;spectrum();}
+   lastPublished=frames.length;
+  }
+  await Promise.all(Array.from({length:4},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
+   if(frames.length>lastPublished&&(groups.length<2||frames.length-lastPublished>=4))publish();
+   $('#tlBusy').textContent=`Loading exposures ${done}/${rows.length}`}}));
+  $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
+  publish();fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
  catch(e){set(e.message,1);$('#tlBusy').hidden=true}finally{busy=0;$('#tlLoad').disabled=false}}
 async function fetchCats(){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`).then(d=>{cats[s]=d.rows;overlay()}).catch(()=>{cats[s]=[];});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
 function zImage(f){ // robust-normalised image (σ units) after flag and band masks
- const key='z'+frames.indexOf(f)+$('#tlBand').value+$('#tlFlag').checked;if(cache.has(key))return cache.get(key);const b=bandSel(),m=$('#tlFlag').checked,n=N*N,z=new Float32Array(n).fill(NaN),ok=[];
+ const key=$('#tlBand').value+':'+$('#tlFlag').checked;const cached=cache.get(f);if(cached?.key===key)return cached.z;const b=bandSel(),m=$('#tlFlag').checked,n=N*N,z=new Float32Array(n).fill(NaN),ok=[];
  for(let i=0;i<n;i++){const v=f.v[i];if(Number.isFinite(v)&&f.f[i]>=0&&(!m||f.f[i]===0)&&(!b||(f.w[i]>=b.lo&&f.w[i]<=b.hi)))ok.push(i)}
  if(ok.length>200){const a=Float32Array.from(ok,i=>f.v[i]).sort(),med=a[a.length>>1],dev=Float32Array.from(a,x=>Math.abs(x-med)).sort(),sg=(dev[dev.length>>1]*1.4826)||1;for(const i of ok)z[i]=(f.v[i]-med)/sg}
- cache.set(key,z);return z}
+ cache.set(f,{key,z});return z}
 function mean(list){const n=N*N,o=new Float32Array(n),c=new Uint8Array(n);for(const z of list)for(let i=0;i<n;i++)if(z[i]===z[i]){o[i]+=z[i];c[i]++}for(let i=0;i<n;i++)o[i]=c[i]?o[i]/c[i]:NaN;return o}
-function build(){
+function build(current=groups[k]?.m[0]){
  const bin=+$('#tlBin').value,list=frames.filter(f=>zImage(f).some(Number.isFinite)),g=new Map();
  for(const f of list){const key=bin===-1?'d'+f.det:bin>0?f.det+'|'+Math.floor((f.t-frames[0].t)/bin):frames.indexOf(f);(g.get(key)||g.set(key,[]).get(key)).push(f)}
  groups=[...g.values()].map(m=>({m,t:m.reduce((a,f)=>a+f.t,0)/m.length,det:new Set(m.map(f=>f.det)).size==1?m[0].det:0,z:null})).sort((a,b)=>a.t-b.t);
  for(const x of groups)x.z=x.m.length>1?mean(x.m.map(zImage)):zImage(x.m[0]);
- k=Math.min(k,groups.length-1);$('#tlSlide').max=Math.max(0,groups.length-1);$('#tlSlide').value=k;draw()}
+ const selected=groups.findIndex(group=>group.m.includes(current));
+ k=selected>=0?selected:Math.max(0,Math.min(k,groups.length-1));$('#tlSlide').max=Math.max(0,groups.length-1);$('#tlSlide').value=k;draw()}
 const gray=v=>{const u=Math.max(0,Math.min(1,(v+1)/9));return Math.asinh(u*12)/Math.asinh(12)};
 function paint(z,tint,alpha,diff,ctx){const o=new ImageData(N,N);for(let i=0;i<N*N;i++){const v=z[i];if(v!==v)continue;const j=i*4;if(diff){const a=Math.min(1,Math.asinh(Math.abs(v)/2)/Math.asinh(12));o.data[j]=v>0?40+215*a:20;o.data[j+1]=30+90*a;o.data[j+2]=v<0?40+215*a:20}else{const g=gray(v)*255;o.data[j]=g*tint[0];o.data[j+1]=g*tint[1];o.data[j+2]=g*tint[2]}o.data[j+3]=255*alpha}
  const c=document.createElement('canvas');c.width=c.height=N;c.getContext('2d').putImageData(o,0,0);ctx.drawImage(c,0,0)}
