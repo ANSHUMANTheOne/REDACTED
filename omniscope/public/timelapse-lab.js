@@ -156,9 +156,9 @@ export function openComparison(data) {
 }
 window.omniscopeLab={open:()=>root.showModal(),load:(ra,dec,fov)=>{$('#tlRa').value=ra;$('#tlDec').value=dec;if(fov)$('#tlFov').value=fov;return loadAll()}};
 
-// ---- Ask the assistant (free, via Cloudflare Workers AI) ----
+// On-device assistant with a built-in guide for unsupported browsers.
 const chat=document.createElement('div');chat.className='tl-chat';
-chat.innerHTML=`<div id="tlLog" class="tl-log"><div class="tl-a">Ask me about this field: what moved, what a band shows, or how to confirm a mover.</div></div><div class="tl-row"><input id="tlAsk" placeholder="Ask about what you see…"><button id="tlSend">Ask</button></div>`;
+chat.innerHTML=`<div id="tlLog" class="tl-log"><div class="tl-a">Ask about your images, wavelengths, or possible changes. Uses on-device AI where available and the built-in guide elsewhere.</div></div><div class="tl-row"><input id="tlAsk" placeholder="Ask about what you see…"><button id="tlSend">Ask</button></div>`;
 root.querySelector('.tl-view').append(chat);
 const hist=[];
 function context(){
@@ -172,9 +172,24 @@ function context(){
 async function ask(){
  const i=document.getElementById('tlAsk'),q=i.value.trim();if(!q)return;i.value='';const log=document.getElementById('tlLog'),add=(c,t)=>{const d=document.createElement('div');d.className=c;d.textContent=t;log.append(d);log.scrollTop=log.scrollHeight;return d};
  add('tl-u',q);hist.push({role:'user',content:q});const wait=add('tl-a','Thinking…'),done=(t,c)=>{wait.textContent=t;if(c)wait.classList.add(c);hist.push({role:'assistant',content:t})};
- if(Date.now()<aiOff)return done('(basic mode) '+basic(q));
- try{const r=await fetch(API+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(0,-1).concat({role:'user',content:q}),context:context()}),signal:AbortSignal.timeout(45000)}),d=await r.json().catch(()=>({}));if(!r.ok){const e=Error(d.error||'Assistant unavailable.');e.status=r.status;throw e}done(d.reply)}
- catch(e){aiOff=Date.now()+10*60000;done((e.status===429?'AI usage has run out for now, so I am switching to basic mode. ':'The AI assistant is unavailable, so I am switching to basic mode. ')+'This is not an AI: it reads your loaded data and answers directly. I will try the AI again in a few minutes.\n\n'+basic(q),'tl-basic')}}
+ const model=globalThis.LanguageModel;
+ let session;
+ try {
+  if(!model || await model.availability()==='unavailable'){
+   done('Offline guide · '+basic(q),'tl-basic');return;
+  }
+  wait.textContent='Starting on-device AI. Your browser may need to download its model first…';
+  session=await model.create({initialPrompts:[{role:'system',content:'You are the OmniScope astronomy assistant. Answer briefly. Use only the supplied context for claims about the current field. Never invent a detection.'}]});
+  wait.textContent='Thinking on this device…';
+  const reply=await session.prompt('Observation context:\n'+context()+'\n\nQuestion: '+q);
+  done(reply.trim() || 'Offline guide · '+basic(q));
+ } catch {
+  done('Offline guide · '+basic(q),'tl-basic');
+ } finally {
+  session?.destroy();
+ }
+}
+
 document.getElementById('tlSend').onclick=ask;document.getElementById('tlAsk').onkeydown=e=>{if(e.key==='Enter')ask()};
 
 // ---- Mover finder UI ----
@@ -190,8 +205,8 @@ mb.onclick=()=>{
   return {...v,ra,dec,rate,match}}).sort((a,b)=>(!!a.match-!!b.match)||(b.m.length-a.m.length));
  renderMovers();overlay();set(`${movers.length} candidate${movers.length>1?'s':''} (${movers.filter(v=>!v.match).length} with no catalog match). Pink = unmatched mover, teal = matches a catalog star, dashed violet = stationary variable. Candidates need human review.`)};
 
-// ---- Basic (non-AI) assistant: used automatically when the free AI allowance runs out ----
-let aiOff=0;
+// Built-in help for browsers without the on-device model.
+
 function basic(q){
  const t=q.toLowerCase(),has=r=>r.test(t),loaded=field&&frames.length,need='Load a target first (pick a preset or enter RA/Dec, then press Load).';
  const fmt=r=>`${r.source_id} (mag ${(+r.mag).toFixed(1)})`,top=s=>(cats[s]||[]).slice(0,5).map(fmt).join(', ')||'none';
