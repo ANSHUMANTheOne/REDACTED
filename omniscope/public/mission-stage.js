@@ -28,12 +28,28 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  bandPanel.querySelector('.mission-band-top').after(bandChoices);
  const bandRange=document.createElement('div');bandRange.className='stage-selected-range';bandRange.innerHTML='<span class="stage-range-text"></span><svg class="stage-wave" viewBox="0 0 92 26" role="img" aria-label="Relative infrared wave spacing"><path class="stage-wave-path"/></svg>';bandChoices.after(bandRange);
  const wavePath=bandRange.querySelector('.stage-wave-path');
- function syncBandChoices(){for(const button of bandChoices.children){const active=button.dataset.band===band.value;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.disabled=band.disabled;}bandRange.querySelector('.stage-range-text').textContent=`Band ${band.value} · ${bandRanges[Number(band.value)-1]} µm`;}
+ let activeChannel=0,channelText='';
+ function syncBandChoices(){for(const button of bandChoices.children){const active=button.dataset.band===band.value;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.disabled=band.disabled;}bandRange.querySelector('.stage-range-text').textContent=channelText||`Band ${band.value} · ${bandRanges[Number(band.value)-1]} µm`;}
  syncBandChoices();
  const bands=[[.75,1.12],[1.10,1.65],[1.63,2.43],[2.40,3.85],[3.81,4.43],[4.41,5.01]];
  let activeBand=0;
  function updateBandRail(){const selected=Number(band.value);if(selected===activeBand)return;activeBand=selected;const [lo,hi]=bands[selected-1]||bands[1];spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);}
  updateBandRail();
+ // 102-band picker: 17 channels inside each of the 6 detector bands (nominal log-spaced edges)
+ const chanWrap=document.createElement('div');chanWrap.className='stage-channels';
+ chanWrap.innerHTML='<div class="stage-channels-head"><span>Channel · 17 per band = 102 total</span><button type="button" data-ch="0" class="active">All</button></div><div class="stage-channel-grid"></div>';
+ const chanGrid=chanWrap.querySelector('.stage-channel-grid');
+ const chEdge=(d,i)=>{const [lo,hi]=bands[d-1]||bands[1];return lo*Math.pow(hi/lo,i/17)};
+ function drawChannels(){chanGrid.innerHTML='';const d=Number(band.value)||2;for(let c=1;c<=17;c++){const lo=chEdge(d,c-1),hi=chEdge(d,c),b=document.createElement('button');b.type='button';b.dataset.ch=String(c);b.textContent=String(c);b.title=`Band ${(d-1)*17+c} of 102 \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;b.setAttribute('aria-label',b.title);b.classList.toggle('active',c===activeChannel);b.onclick=()=>pickChannel(c);chanGrid.appendChild(b);}chanWrap.querySelector('[data-ch="0"]').classList.toggle('active',!activeChannel);}
+ function pickChannel(c){if(band.disabled)return;activeChannel=c;const d=Number(band.value)||2,w=$('spectralWavelength'),sw=$('spectralWidth');
+  if(c){const lo=chEdge(d,c-1),hi=chEdge(d,c);if(w){w.value=String((lo+hi)/2);w.dispatchEvent(new Event('input',{bubbles:true}));}
+   if(sw){let o=sw.querySelector('[data-ch]');if(!o){o=document.createElement('option');o.dataset.ch='1';sw.appendChild(o);}o.value=String(hi-lo);o.textContent='Channel width';sw.value=o.value;sw.dispatchEvent(new Event('change',{bubbles:true}));}
+   spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);
+   channelText=`Band ${(d-1)*17+c} of 102 \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;syncBandChoices();}
+  else{channelText='';const [lo,hi]=bands[d-1]||bands[1];if(sw){sw.value='.14';sw.dispatchEvent(new Event('change',{bubbles:true}));}spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);syncBandChoices();}
+  drawChannels();}
+ chanWrap.querySelector('[data-ch="0"]').onclick=()=>pickChannel(0);
+ bandRange.after(chanWrap);drawChannels();band.addEventListener('change',()=>{activeChannel=0;channelText='';drawChannels();});
  const cardReplay=document.createElement('button');cardReplay.id='missionReplay';cardReplay.type='button';cardReplay.textContent='▶ Motion preview';cardReplay.title='Replay both recorded exposures';cardReplay.setAttribute('aria-label','Replay observation');cardReplay.setAttribute('aria-pressed','false');toggle.before(cardReplay);
  toggle.hidden=false;
  card.classList.add('is-collapsed');

@@ -13,7 +13,7 @@ export async function onRequestGet({ request }) {
   let url;
   if (p.get('file')) {
     const file = p.get('file');
-    if (!/^\/ibe\/data\/spherex\/qr\d+\/level2\/[A-Za-z0-9_\-/]+\.fits$/.test(file)) {
+    if (!/^\/ibe\/data\/spherex\/(?:qr|dr)\d+\/level2\/[A-Za-z0-9_\-/]+\.fits$/.test(file)) {
       return Response.json({ error: 'Invalid SPHEREx image path.' }, { status: 400 });
     }
     const size = Number(p.get('size') || '.4');
@@ -24,7 +24,7 @@ export async function onRequestGet({ request }) {
     url.search = new URLSearchParams({ center: `${ra},${dec}`, size: String(size), gzip: 'false' }).toString();
   } else {
     const collection = p.get('collection') || 'spherex_qr3';
-    if (!/^spherex_qr\d+(_deep)?$/.test(collection)) {
+    if (!/^spherex_(?:qr|dr)\d+(_deep)?$/.test(collection)) {
       return Response.json({ error: 'Invalid collection.' }, { status: 400 });
     }
     url = new URL(HOST + '/SIA');
