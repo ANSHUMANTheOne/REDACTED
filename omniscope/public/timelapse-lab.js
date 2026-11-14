@@ -70,10 +70,12 @@ async function loadAll(showLatest=false,keepPreview=false){
  try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d);
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
-  const MAX=12;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
-  let done=0,lastPublished=0;
-  const starters=[rows[0],rows.at(-1),rows[Math.floor(rows.length/3)],rows[Math.floor(rows.length*2/3)]];
-  const queue=[...new Set([...starters,...rows])];
+  const MAX=24;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
+  const parallelDownloads=4;
+  let done=0,lastPublished=frames.length;
+  // Prioritize a few dates across the full timeline, including its latest visit.
+  const previewIndices=[rows.length-1,0,Math.floor(rows.length/3),Math.floor(rows.length*2/3)];
+  const queue=[...new Set([...previewIndices.map(index=>rows[index]),...rows])];
   $('#tlBusy').hidden=false;
   $('#tlBusy').textContent='Preparing the first exposures…';
   function publish(){
@@ -87,9 +89,9 @@ async function loadAll(showLatest=false,keepPreview=false){
    }
    lastPublished=frames.length;
   }
-  await Promise.all(Array.from({length:4},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0,22000)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
+  await Promise.all(Array.from({length:Math.min(parallelDownloads,queue.length)},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0,22000)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
    if(frames.length>lastPublished&&(groups.length<2||frames.length-lastPublished>=4))publish();
-   $('#tlBusy').textContent=`Loading exposures ${done}/${rows.length}`}}));
+   $('#tlBusy').textContent=groups.length>=2?`Ready to play · loading more (${done}/${rows.length})`:`Loading exposures ${done}/${rows.length}`}}));
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
   publish();fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
  catch(e){set(keepPreview?'DR1 preview shown. The live archive could not add more observations.':e.message,1);$('#tlBusy').hidden=true}finally{busy=0;$('#tlLoad').disabled=false}}
