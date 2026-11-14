@@ -268,3 +268,5 @@
 }
 body *{font-family:'Public Sans',Arial,sans-serif!important}
 body .mono,body .mission-stage-readout,body .mission-spectrum-head{font-variant-numeric:tabular-nums}
+
+.mission-comparison button.mission-time-lapse{background:#efc49e;color:#18222a;border-color:#efc49e;font-weight:700}

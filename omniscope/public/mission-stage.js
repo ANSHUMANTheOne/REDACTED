@@ -8,7 +8,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  <div class="stage-field"><span class="stage-step">01 / SKY FIELD</span><span id="stageField">Opening archive…</span></div>
  <div id="stageBandSlot"></div>
  <details class="stage-visit-details"><summary id="visitSummary">03 / OBSERVATIONS <span>Using the first two visits</span></summary><div class="mission-stage-pickers"><label>Earlier visit<select id="stageDateA" aria-label="Earlier observation date"></select></label><label>Later visit<select id="stageDateB" aria-label="Later observation date"></select></label></div></details>
- <div class="mission-stage-actions"><button id="stageVisit" class="stage-primary">Compare images <span aria-hidden="true">↗</span></button><button id="stageReplay" class="stage-secondary" aria-pressed="false">▶ Preview motion</button></div>
+ <div class="mission-stage-actions"><button id="stageTimeLapse" class="stage-primary">▶ Time-lapse</button><button id="stageVisit" class="stage-secondary">Compare images</button></div>
  <div class="mission-stage-readout" aria-live="off"><strong id="stageWave">Measured wavelength will appear here.</strong><span id="stageTime">Loading the selected visits…</span><span id="stageCoords">Recorded spacecraft position loads with each image.</span></div>
  <p class="mission-stage-note">Position from FITS metadata. Diagram not to scale.</p>`;
  ui.appendChild(stage);
@@ -19,7 +19,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  stage.querySelector('#stageBandSlot').appendChild(bandPanel);
  bandPanel.querySelector('.mission-band-top h4').textContent='02 / INFRARED DETECTOR';
  bandPanel.querySelector('.mission-band-top .calm-eyebrow').textContent='CHOOSE THE LIGHT';
- const a=$('stageDateA'),b=$('stageDateB'),band=$('missionBand'),visitButton=$('stageVisit'),replayButton=$('stageReplay'),toggle=$('missionEnlarge');
+ const a=$('stageDateA'),b=$('stageDateB'),band=$('missionBand'),visitButton=$('stageVisit'),stageTimeLapse=$('stageTimeLapse'),toggle=$('missionEnlarge');
  const spectrum=document.createElement('div');spectrum.className='mission-spectrum';spectrum.innerHTML='<div class="mission-spectrum-head"><span>0.75 \u00b5m</span><strong id="missionSpectrumValue">Measured wavelength</strong><span>5.01 \u00b5m</span></div><div class="mission-spectrum-track"><span class="mission-spectrum-band"></span><span class="mission-spectrum-marker" id="missionSpectrumMarker"></span></div><div class="mission-spectrum-guide"><span>Shorter</span><span>Infrared light · \u00b5m = micrometre</span><span>Longer</span></div>';
  bandPanel.appendChild(spectrum);
  const bandChoices=document.createElement('div');bandChoices.className='stage-band-choices';bandChoices.setAttribute('role','group');bandChoices.setAttribute('aria-label','SPHEREx infrared bands');
@@ -52,12 +52,14 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  bandRange.after(chanWrap);drawChannels();band.addEventListener('change',()=>{activeChannel=0;channelText='';drawChannels();});
  const timeLapse=document.createElement('button');
  timeLapse.type='button';
- timeLapse.textContent='Time-lapse';
+ timeLapse.textContent='▶ Time-lapse';
+ timeLapse.className='mission-time-lapse';
  timeLapse.onclick=async()=>{
   const lab=await import('./timelapse-lab.js');
   lab.openComparison(getComparison());
  };
  toggle.before(timeLapse);
+ stageTimeLapse.onclick=timeLapse.onclick;
  const cardReplay=document.createElement('button');cardReplay.id='missionReplay';cardReplay.type='button';cardReplay.textContent='▶ Motion preview';cardReplay.title='Replay both recorded exposures';cardReplay.setAttribute('aria-label','Replay observation');cardReplay.setAttribute('aria-pressed','false');toggle.before(cardReplay);
  toggle.hidden=false;
  card.classList.add('is-collapsed');
@@ -71,9 +73,9 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  function closeCard(){card.classList.add('is-collapsed');card.setAttribute('aria-expanded','false');toggle.textContent='← Scene';toggle.title='Return to observing scene';toggle.setAttribute('aria-label','Return to observing scene');indicator.hidden=true;}
  closeCard();
  toggle.onclick=()=>card.classList.contains('is-collapsed')?openCard():closeCard();
- function stop(){playing=false;lastIndex=-1;setStoryState({playing:false,selectedVisit:null,progress:.5});replayButton.textContent='▶ Preview motion';replayButton.setAttribute('aria-pressed','false');cardReplay.textContent='▶ Motion preview';cardReplay.setAttribute('aria-pressed','false');indicator.hidden=true;}
- function play(){if(playing){stop();return;}if(getComparison().images.length!==2)return;document.dispatchEvent(new Event('omni-stop-blink'));playing=true;started=performance.now();lastIndex=-1;replayButton.textContent='Ⅱ Pause motion';replayButton.setAttribute('aria-pressed','true');cardReplay.textContent='Ⅱ Pause motion';cardReplay.setAttribute('aria-pressed','true');}
- replayButton.onclick=play;cardReplay.onclick=play;
+ function stop(){playing=false;lastIndex=-1;setStoryState({playing:false,selectedVisit:null,progress:.5});cardReplay.textContent='▶ Motion preview';cardReplay.setAttribute('aria-pressed','false');indicator.hidden=true;}
+ function play(){if(playing){stop();return;}if(getComparison().images.length!==2)return;document.dispatchEvent(new Event('omni-stop-blink'));playing=true;started=performance.now();lastIndex=-1;cardReplay.textContent='Ⅱ Pause motion';cardReplay.setAttribute('aria-pressed','true');}
+ cardReplay.onclick=play;
  visitButton.onclick=()=>{if(getComparison().images.length!==2)return;openCard();};
  document.addEventListener('omni-stop-replay',stop);
  async function choosePair(event){const ai=Number(a.value),bi=Number(b.value);if(ai===bi){$('stageTime').textContent='Choose two different visits.';return;}document.dispatchEvent(new Event('omni-stop-blink'));stop();busy=true;loadError='';visitButton.disabled=true;replayButton.disabled=true;$('stageTime').textContent='Reading the selected FITS images…';try{if(await loadPairChoice(ai,bi))selectVisit(event?.target===b?'B':'A');else loadError=$('surveyStatus').textContent||'The selected visit could not be opened.';}finally{busy=false;visitButton.disabled=false;replayButton.disabled=false;lastSignature='';drawComparison();}}
@@ -81,7 +83,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  band.onchange=async()=>{document.dispatchEvent(new Event('omni-stop-blink'));stop();busy=true;loadError='';visitButton.disabled=true;replayButton.disabled=true;$('stageTime').textContent=`Reading detector ${band.value}…`;try{if(!await chooseDetector(Number(band.value)))loadError=$('surveyStatus').textContent||'This detector could not be opened.';}finally{busy=false;visitButton.disabled=false;replayButton.disabled=false;lastSignature='';drawComparison();}};
  function choices(data){const signature=data.detector+'|'+data.choices.map(r=>r.id+':'+r.date).join('|');if(signature===lastSignature){if(!busy&&!data.busy)for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]])if(selected>=0&&select.value!==String(selected))select.value=String(selected);return;}lastSignature=signature;for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]]){select.replaceChildren();for(const item of data.choices){const option=document.createElement('option');option.value=String(item.index);option.textContent=`${item.date} · ${item.id||'observation '+(item.index+1)}`;select.appendChild(option);}select.value=String(selected??'');}
   a.disabled=b.disabled=data.choices.length<2||busy;const first=data.choices.find(item=>item.index===Number(a.value)),second=data.choices.find(item=>item.index===Number(b.value));const summary=$('visitSummary').querySelector('span');summary.textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';}
- function update(time){const data=getComparison();choices(data);const first=data.choices.find(item=>item.index===data.selectedChoices[0]),second=data.choices.find(item=>item.index===data.selectedChoices[1]);$('visitSummary').querySelector('span').textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';visitButton.disabled=busy||data.busy||data.images.length!==2;replayButton.disabled=visitButton.disabled;cardReplay.disabled=visitButton.disabled;timeLapse.disabled=visitButton.disabled;band.disabled=busy||data.busy;
+ function update(time){const data=getComparison();choices(data);const first=data.choices.find(item=>item.index===data.selectedChoices[0]),second=data.choices.find(item=>item.index===data.selectedChoices[1]);$('visitSummary').querySelector('span').textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';visitButton.disabled=busy||data.busy||data.images.length!==2;stageTimeLapse.disabled=visitButton.disabled;cardReplay.disabled=visitButton.disabled;timeLapse.disabled=visitButton.disabled;band.disabled=busy||data.busy;
   if(data.field){$('stageField').textContent=`RA ${data.field.ra.toFixed(3)}° · Dec ${data.field.dec.toFixed(3)}°`;stage.querySelector('h3').textContent=Math.abs(data.field.ra-127.69444)<.01&&Math.abs(data.field.dec+39.1776)<.01?'Vela field':'Selected field';}
   if(playing&&(data.busy||data.images.length!==2))stop();
   let index=data.visit,progress=.5;
