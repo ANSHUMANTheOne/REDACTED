@@ -1,16 +1,15 @@
-// Screen-space markers use recorded FITS coordinates. Wavelength is shown in
-// the instrument panel, rather than as a misleading line through the scene.
 export function installObservationOverlay({ui,c,focusSpacecraft,cancelCameraMotion,rotateMission,earthRadius}){
  const beam=document.createElementNS('http://www.w3.org/2000/svg','svg');
  beam.setAttribute('class','observation-beam');
  beam.setAttribute('aria-hidden','true');
- beam.innerHTML='<path class="recorded-trail recorded-trail-a"/><path class="recorded-trail recorded-trail-b"/><text class="recorded-trail-label" data-trail="a">A</text><text class="recorded-trail-label" data-trail="b">B</text>';
+ beam.innerHTML='<defs><linearGradient id="irFade" gradientUnits="userSpaceOnUse"><stop stop-color="#ffcf9d" stop-opacity="0.9"/><stop offset="1" stop-color="#ffcf9d" stop-opacity="0"/></linearGradient></defs><path class="sky-ir-wave" fill="none" stroke="url(#irFade)" stroke-width="1.6"/><path class="recorded-trail recorded-trail-a"/><path class="recorded-trail recorded-trail-b"/><text class="recorded-trail-label" data-trail="a">A</text><text class="recorded-trail-label" data-trail="b">B</text>';
  ui.appendChild(beam);
  const marker=document.createElement('button');marker.className='spacecraft-beacon';marker.type='button';marker.setAttribute('aria-label','Inspect SPHEREx at this exposure');marker.innerHTML='<span class="spacecraft-beacon-ring"><span class="spacecraft-beacon-core"></span></span><span class="spacecraft-beacon-title">SPHEREx <small>infrared</small></span><span class="spacecraft-wave" aria-hidden="true"><span>IR</span><svg viewBox="0 0 128 28" preserveAspectRatio="none"><path/></svg></span>';
  ui.appendChild(marker);
+ const skyWave=beam.querySelector(".sky-ir-wave"),fade=beam.querySelector("#irFade");
  const wavePath=marker.querySelector('.spacecraft-wave path'),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const locate=document.createElement('button');locate.className='spacecraft-locate';locate.type='button';locate.textContent='⌖ Locate SPHEREx';locate.hidden=true;locate.onclick=focusSpacecraft;ui.appendChild(locate);
- const info=document.createElement('aside');info.className='spacecraft-info';info.hidden=true;info.setAttribute('aria-label','Recorded SPHEREx position');info.innerHTML='<div class="spacecraft-info-head"><span>SPHEREx / recorded exposure</span><button type="button" aria-label="Close spacecraft details">×</button></div><strong id="spacecraftInfoDate">—</strong><p id="spacecraftInfoPosition">Reading FITS position…</p><p id="spacecraftInfoLight">Reading wavelength…</p><div class="spacecraft-info-actions"><button type="button" id="spacecraftInfoFocus">Center spacecraft</button><button type="button" id="spacecraftInfoCompare">View images ↗</button></div><small>Earth-centered FITS coordinates. Spacecraft model and wavelength marks are enlarged diagrams.</small>';
+ const info=document.createElement('aside');info.className='spacecraft-info';info.hidden=true;info.setAttribute('aria-label','Recorded SPHEREx position');info.innerHTML='<div class="spacecraft-info-head"><span>SPHEREx / recorded exposure</span><button type="button" aria-label="Close spacecraft details">×</button></div><strong id="spacecraftInfoDate">—</strong><p id="spacecraftInfoPosition">Reading FITS position…</p><p id="spacecraftInfoLight">Reading wavelength…</p><div class="spacecraft-info-actions"><button type="button" id="spacecraftInfoFocus">Center spacecraft</button><button type="button" id="spacecraftInfoCompare">View images ↗</button></div><small>Earth-centered FITS coordinates. Spacecraft model and wave spacing is illustrative. The wave follows the viewing direction and represents incoming infrared light.</small>';
  ui.appendChild(info);
  let markerDrag=null,suppressMarkerClick=false;
  marker.addEventListener('pointerdown',event=>{if(event.button!==0)return;cancelCameraMotion();markerDrag={x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:false};try{marker.setPointerCapture(event.pointerId);}catch{};});
@@ -25,7 +24,7 @@ export function installObservationOverlay({ui,c,focusSpacecraft,cancelCameraMoti
  const screen=(point)=>{const p=point.clone().project(c.camera);return {x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight,z:p.z};};
  function hiddenBehindEarth(craft,earth){const to=craft.clone().sub(c.camera.position),e=earth.clone().sub(c.camera.position),t=Math.max(0,Math.min(1,e.dot(to)/to.lengthSq()));return t>0&&t<1&&e.addScaledVector(to,-t).length()<earthRadius*.99;}
  let lastInfo=0,lastCardOpen=false;
- function update({craft,earth,record,index,progress,wavelength,date,field,cardOpen,trails}){
+ function update({craft,earth,direction,record,index,progress,wavelength,date,field,cardOpen,trails}){
   if(cardOpen&&!lastCardOpen){info.hidden=true;marker.setAttribute('aria-expanded','false');}lastCardOpen=cardOpen;
   const orbitContext=c.camera.position.distanceTo(earth)>=20;
   ui.classList.toggle('orbit-context',orbitContext);
@@ -40,6 +39,27 @@ export function installObservationOverlay({ui,c,focusSpacecraft,cancelCameraMoti
   marker.style.left=`${p.x}px`;marker.style.top=`${p.y}px`;marker.querySelector('small').textContent=Number.isFinite(wavelength)?`${wavelength.toFixed(3)} µm`:'infrared';
   marker.classList.toggle('wave-left',p.x>W-(W<=800?155:205));
   marker.setAttribute('aria-label',Number.isFinite(wavelength)?`Inspect SPHEREx. Measured infrared wavelength ${wavelength.toFixed(3)} micrometres`:'Inspect SPHEREx at this exposure');
+  skyWave.setAttribute('d','');
+  if(Number.isFinite(wavelength)&&direction&&!orbitContext){
+   const towardEarth=earth.clone().sub(craft);
+   const closest=towardEarth.dot(direction);
+   const clearsEarth=closest<=0||towardEarth.addScaledVector(direction,-closest).length()>=earthRadius;
+   if(clearsEarth){
+    const far=screen(craft.clone().addScaledVector(direction,.75));
+    const dx=far.x-p.x,dy=far.y-p.y,length=Math.hypot(dx,dy);
+    if(length>2&&far.z>-1&&far.z<1){
+     const ux=dx/length,uy=dy/length,reach=Math.hypot(W,H);
+     const period=30+(wavelength-.75)*11,phase=reducedMotion?0:performance.now()*.007;
+     for(const [name,value] of Object.entries({x1:p.x,y1:p.y,x2:p.x+ux*reach*.8,y2:p.y+uy*reach*.8}))fade.setAttribute(name,value);
+     let path='';
+     for(let x=0;x<=reach;x+=5){
+      const y=Math.sin(x*2*Math.PI/period+phase)*4*Math.min(x/40,1);
+      path+=(x?'L':'M')+(p.x+ux*x-uy*y).toFixed(1)+' '+(p.y+uy*x+ux*y).toFixed(1)+' ';
+     }
+     skyWave.setAttribute('d',path);
+    }
+   }
+  }
   if(Number.isFinite(wavelength)){
    const period=16+Math.max(0,Math.min(1,(wavelength-.75)/4.26))*23,phase=reducedMotion?0:performance.now()*.003;
    wavePath.setAttribute('d',Array.from({length:65},(_,i)=>{const x=i*2,y=14-Math.sin(x*Math.PI*2/period-phase)*6;return `${i?'L':'M'}${x} ${y.toFixed(2)}`;}).join(' '));
