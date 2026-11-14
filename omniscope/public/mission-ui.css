@@ -120,3 +120,7 @@ html,body,.unified-mission{background:#0b1118}
 .stage-channel-grid button.active,.stage-channels-head button.active{background:#f2c9a0;color:#1a1208;border-color:#f2c9a0}
 
 .stage-channels summary{cursor:pointer;color:#d6e2e7;font-size:11px;margin-bottom:6px}
+
+.mission-scene-caption .live-orbit-toggle{display:block;margin:8px 0 0 auto;padding:8px 12px;border:1px solid #6a8994;border-radius:8px;background:#12242dcc;color:#d9f2fa;cursor:pointer}
+.mission-scene-caption:has(.live-orbit-toggle){pointer-events:auto}
+.mission-scene-caption small:not([hidden]){display:block;margin-top:5px;color:#a8cddb}
