@@ -19,13 +19,13 @@ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('
 const btn=Object.assign(document.createElement('button'),{id:'tlOpen',textContent:'▶ Time-lapse lab',title:'SPHEREx multi-epoch movie, stacking and spectra'});
 root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
-<ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Load SPHEREx images”.</span></div></div>
+<ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Open sky field”.</span></div></div>
 <div class="tl-play"><button id="tlPlay">▶</button><input id="tlSlide" type="range" min="0" max="0" value="0"><select id="tlFps"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
 <div id="tlInfo" class="tl-info">Pick a target to begin.</div><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
 <div class="tl-row"><input id="tlRa" type="number" step="any" placeholder="RA °"><input id="tlDec" type="number" step="any" placeholder="Dec °"></div>
-<label>Spectral band: all 102 channels (click one)</label><div class="tl-map"><button class="tl-all on" data-b="">All wavelengths</button>${DET.map((_,d)=>`<div class="tl-mrow"><span style="color:${COL[d]}">D${d+1}</span>${BANDS.filter(b=>b.d==d+1).map(b=>`<button data-b="${b.d}-${b.c}" style="--c:${COL[d]}" title="Band ${d*17+b.c} of 102 · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm"></button>`).join('')}</div>`).join('')}</div><div id="tlBandLabel" class="tl-info">All wavelengths (broadband)</div><select id="tlBand" hidden><option value="">All wavelengths</option>${DET.map((_,d)=>`<optgroup label="Detector ${d+1}">${BANDS.filter(b=>b.d==d+1).map(b=>`<option value="${b.d}-${b.c}">D${b.d} ch${b.c} · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm</option>`).join('')}</optgroup>`).join('')}</select><label>Field of view (bigger = follows faster movers)</label><select id="tlFov"><option value=".05">0.05° (3′)</option><option value=".1">0.1°</option><option value=".2" selected>0.2°</option><option value=".4">0.4°</option><option value=".7">0.7° (fast movers)</option></select><button id="tlLoad" class="tl-main">① Load SPHEREx images</button><label>② How to show them</label><select id="tlMode"><option value="movie">Time-lapse</option><option value="trail">Trail (new on top of old)</option><option value="sum">Running sum</option><option value="first">Subtract: first epoch</option><option value="prev">Subtract: previous epoch</option></select>
+<label>Spectral band: all 102 channels (click one)</label><div class="tl-map"><button class="tl-all on" data-b="">All wavelengths</button>${DET.map((_,d)=>`<div class="tl-mrow"><span style="color:${COL[d]}">D${d+1}</span>${BANDS.filter(b=>b.d==d+1).map(b=>`<button data-b="${b.d}-${b.c}" style="--c:${COL[d]}" title="Band ${d*17+b.c} of 102 · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm"></button>`).join('')}</div>`).join('')}</div><div id="tlBandLabel" class="tl-info">All wavelengths (broadband)</div><select id="tlBand" hidden><option value="">All wavelengths</option>${DET.map((_,d)=>`<optgroup label="Detector ${d+1}">${BANDS.filter(b=>b.d==d+1).map(b=>`<option value="${b.d}-${b.c}">D${b.d} ch${b.c} · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm</option>`).join('')}</optgroup>`).join('')}</select><label>Field of view (bigger = follows faster movers)</label><select id="tlFov"><option value=".05">0.05° (3′)</option><option value=".1">0.1°</option><option value=".2" selected>0.2°</option><option value=".4">0.4°</option><option value=".7">0.7° (fast movers)</option></select><button id="tlLoad" class="tl-main">Open sky field</button><label>② How to show them</label><select id="tlMode"><option value="movie">Time-lapse</option><option value="trail">Trail (new on top of old)</option><option value="sum">Running sum</option><option value="first">Subtract: first epoch</option><option value="prev">Subtract: previous epoch</option></select>
 <details class="tl-adv"><summary>More options: detector, stacking</summary><label>Detector</label><select id="tlDet"><option value="0">All six (1–5 μm)</option>${DET.map((r,i)=>`<option value="${i+1}"${i==2?' selected':''}>D${i+1} · ${r[0]}–${r[1]} μm</option>`).join('')}</select>
 
 <label>Stack frames</label><select id="tlBin"><option value="0">Each exposure</option><option value="7">Add: 7-day bins</option><option value="30">Add: 30-day bins</option><option value="-1">Add: one per detector</option></select></details>
@@ -34,9 +34,9 @@ root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx
 <div class="tl-row"><button id="tlLink">Copy share link</button><button id="tlPng">Save frame</button></div>
 <p class="tl-note">Real IRSA Level 2 cutouts, registered by their WCS. Detectors are never subtracted from each other. Band edges are nominal; pixels are filtered by their true FITS wavelength. Gaia positions are moved by proper motion to each frame's date.</p></div></div>`;
 const actions = document.querySelector('.mission-stage-actions');
-if (actions) actions.after(btn);
-else document.body.append(btn);
+if (!actions) document.body.append(btn);
 document.body.append(root);
+root.addEventListener('close',stop);
 root.querySelector('.tl-grid').prepend(root.querySelector('.tl-ctl'));
 root.querySelector('.tl-row:has(#tlDec)').after(root.querySelector('#tlLoad'));
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
@@ -111,6 +111,35 @@ $('#tlPng').onclick=()=>{const o=document.createElement('canvas');o.width=o.heig
 const q=new URLSearchParams(location.search);
 if(q.get('lab')||q.has('ra')){for(const [p,id] of [['ra','#tlRa'],['dec','#tlDec'],['fov','#tlFov'],['det','#tlDet'],['band','#tlBand'],['mode','#tlMode'],['name','#tlName']])if(q.has(p))$(id).value=q.get(p);
  addEventListener('load',()=>{root.showModal();if(q.has('ra')&&q.has('dec'))loadAll();else if(q.get('name'))$('#tlRes').click()})}
+export function openComparison(data) {
+ if(busy || data.exposures.length<2) {
+  if(!root.open) root.showModal();
+  return;
+ }
+ stop();
+ const {ra,dec}=data.field,fov=data.fov;
+ field={ra,dec,fov};
+ hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
+ target=null;cats={};pin=null;movers=[];k=0;cache.clear();
+ renderMovers();
+ $('#tlRa').value=ra;$('#tlDec').value=dec;$('#tlName').value='';
+ $('#tlDet').value=String(data.detector);
+ $('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
+ syncMap();
+ frames=data.exposures.map(({sample,t,url})=>{
+  const v=new Float32Array(N*N),w=new Float32Array(N*N),f=new Int32Array(N*N);
+  for(let y=0;y<N;y++) for(let x=0;x<N;x++){
+   const source=Math.round(y*(sample.n-1)/(N-1))*sample.n+Math.round(x*(sample.n-1)/(N-1));
+   const dest=y*N+x;
+   v[dest]=sample.values[source];w[dest]=sample.wavelength[source];f[dest]=sample.flags[source];
+  }
+  return {t,url,det:data.detector,v,w,f};
+ });
+ $('#tlEmpty').hidden=true;
+ $('#tlPix').textContent='Click the image to see its spectrum.';
+ spectrum();build();
+ if(!root.open) root.showModal();
+}
 window.omniscopeLab={open:()=>root.showModal(),load:(ra,dec,fov)=>{$('#tlRa').value=ra;$('#tlDec').value=dec;if(fov)$('#tlFov').value=fov;return loadAll()}};
 
 // ---- Ask the assistant (free, via Cloudflare Workers AI) ----

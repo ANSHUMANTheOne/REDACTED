@@ -50,6 +50,14 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
   drawChannels();}
  chanWrap.querySelector('[data-ch="0"]').onclick=()=>pickChannel(0);
  bandRange.after(chanWrap);drawChannels();band.addEventListener('change',()=>{activeChannel=0;channelText='';drawChannels();});
+ const timeLapse=document.createElement('button');
+ timeLapse.type='button';
+ timeLapse.textContent='Time-lapse';
+ timeLapse.onclick=async()=>{
+  const lab=await import('./timelapse-lab.js');
+  lab.openComparison(getComparison());
+ };
+ toggle.before(timeLapse);
  const cardReplay=document.createElement('button');cardReplay.id='missionReplay';cardReplay.type='button';cardReplay.textContent='▶ Motion preview';cardReplay.title='Replay both recorded exposures';cardReplay.setAttribute('aria-label','Replay observation');cardReplay.setAttribute('aria-pressed','false');toggle.before(cardReplay);
  toggle.hidden=false;
  card.classList.add('is-collapsed');
@@ -73,7 +81,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  band.onchange=async()=>{document.dispatchEvent(new Event('omni-stop-blink'));stop();busy=true;loadError='';visitButton.disabled=true;replayButton.disabled=true;$('stageTime').textContent=`Reading detector ${band.value}…`;try{if(!await chooseDetector(Number(band.value)))loadError=$('surveyStatus').textContent||'This detector could not be opened.';}finally{busy=false;visitButton.disabled=false;replayButton.disabled=false;lastSignature='';drawComparison();}};
  function choices(data){const signature=data.detector+'|'+data.choices.map(r=>r.id+':'+r.date).join('|');if(signature===lastSignature){if(!busy&&!data.busy)for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]])if(selected>=0&&select.value!==String(selected))select.value=String(selected);return;}lastSignature=signature;for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]]){select.replaceChildren();for(const item of data.choices){const option=document.createElement('option');option.value=String(item.index);option.textContent=`${item.date} · ${item.id||'observation '+(item.index+1)}`;select.appendChild(option);}select.value=String(selected??'');}
   a.disabled=b.disabled=data.choices.length<2||busy;const first=data.choices.find(item=>item.index===Number(a.value)),second=data.choices.find(item=>item.index===Number(b.value));const summary=$('visitSummary').querySelector('span');summary.textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';}
- function update(time){const data=getComparison();choices(data);const first=data.choices.find(item=>item.index===data.selectedChoices[0]),second=data.choices.find(item=>item.index===data.selectedChoices[1]);$('visitSummary').querySelector('span').textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';visitButton.disabled=busy||data.busy||data.images.length!==2;replayButton.disabled=visitButton.disabled;cardReplay.disabled=visitButton.disabled;band.disabled=busy||data.busy;
+ function update(time){const data=getComparison();choices(data);const first=data.choices.find(item=>item.index===data.selectedChoices[0]),second=data.choices.find(item=>item.index===data.selectedChoices[1]);$('visitSummary').querySelector('span').textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';visitButton.disabled=busy||data.busy||data.images.length!==2;replayButton.disabled=visitButton.disabled;cardReplay.disabled=visitButton.disabled;timeLapse.disabled=visitButton.disabled;band.disabled=busy||data.busy;
   if(data.field){$('stageField').textContent=`RA ${data.field.ra.toFixed(3)}° · Dec ${data.field.dec.toFixed(3)}°`;stage.querySelector('h3').textContent=Math.abs(data.field.ra-127.69444)<.01&&Math.abs(data.field.dec+39.1776)<.01?'Vela field':'Selected field';}
   if(playing&&(data.busy||data.images.length!==2))stop();
   let index=data.visit,progress=.5;
