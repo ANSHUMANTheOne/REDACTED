@@ -41,16 +41,36 @@ root.querySelector('.tl-grid').prepend(root.querySelector('.tl-ctl'));
 root.querySelector('.tl-row:has(#tlDec)').after(root.querySelector('#tlLoad'));
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
-async function api(path,asJson=1){const r=await fetch(API+path,{signal:AbortSignal.timeout(70000)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
-async function sia(ra,dec){const out=new Map();await Promise.all(COLLECTIONS.map(async c=>{try{const r=await fetch(API+'/archive?'+new URLSearchParams({ra,dec,collection:c}),{signal:AbortSignal.timeout(12000)});if(!r.ok)return;const d=new DOMParser().parseFromString(await r.text(),'application/xml'),f=[...d.getElementsByTagName('FIELD')].map(x=>x.getAttribute('name'));for(const tr of d.getElementsByTagName('TR')){const o=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[f[i],td.textContent]));if(o.access_url&&Number.isFinite(+o.t_min))out.set(o.access_url,o)}}catch{}}));return [...out.values()].sort((a,b)=>a.t_min-b.t_min)}
+async function api(path,asJson=1,timeout=70000){const r=await fetch(API+path,{signal:AbortSignal.timeout(timeout)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
+async function sia(ra,dec,detector){
+ const out=new Map();
+ async function query(collections){
+  await Promise.all(collections.map(async collection=>{
+   try{
+    const url=API+'/archive?'+new URLSearchParams({ra,dec,collection});
+    const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
+    if(!response.ok)return;
+    const doc=new DOMParser().parseFromString(await response.text(),'application/xml');
+    const fields=[...doc.getElementsByTagName('FIELD')].map(field=>field.getAttribute('name'));
+    for(const tr of doc.getElementsByTagName('TR')){
+     const row=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[fields[i],td.textContent]));
+     if(row.access_url&&row.t_min&&Number.isFinite(+row.t_min)&&(!detector||row.energy_bandpassname===`SPHEREx-D${detector}`))out.set(row.access_url,row);
+    }
+   }catch{}
+  }));
+ }
+ await query(COLLECTIONS.filter(collection=>!collection.endsWith('_deep')));
+ if(out.size<2)await query(COLLECTIONS.filter(collection=>collection.endsWith('_deep')));
+ return [...out.values()].sort((a,b)=>a.t_min-b.t_min);
+}
 async function loadAll(showLatest=false,keepPreview=false){
  if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
  busy=1;datePicked=false;$('#tlLoad').disabled=true;stop();if(!keepPreview){frames=[];groups=[];}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
- try{set('Searching the SPHEREx archive…');let rows=await sia(ra,dec);const d=bandSel()?.d || +$('#tlDet').value;if(d)rows=rows.filter(r=>r.energy_bandpassname===`SPHEREx-D${d}`);
+ try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d);
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
-  const MAX=24;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
+  const MAX=12;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
   let done=0,lastPublished=0;
   const starters=[rows[0],rows.at(-1),rows[Math.floor(rows.length/3)],rows[Math.floor(rows.length*2/3)]];
   const queue=[...new Set([...starters,...rows])];
@@ -60,14 +80,18 @@ async function loadAll(showLatest=false,keepPreview=false){
    const current=groups[k]?.m[0];
    frames.sort((a,b)=>a.t-b.t);
    build(current);
-   if(groups.length){$('#tlEmpty').hidden=true;spectrum();}
+   if(groups.length){
+    $('#tlEmpty').hidden=true;
+    if(showLatest&&!datePicked&&!timer){k=groups.length-1;draw();}
+    spectrum();
+   }
    lastPublished=frames.length;
   }
-  await Promise.all(Array.from({length:4},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
+  await Promise.all(Array.from({length:4},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0,22000)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
    if(frames.length>lastPublished&&(groups.length<2||frames.length-lastPublished>=4))publish();
    $('#tlBusy').textContent=`Loading exposures ${done}/${rows.length}`}}));
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  publish();if(showLatest&&!datePicked&&!timer&&groups.length){k=groups.length-1;draw();}fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
+  publish();fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
  catch(e){set(keepPreview?'DR1 preview shown. The live archive could not add more observations.':e.message,1);$('#tlBusy').hidden=true}finally{busy=0;$('#tlLoad').disabled=false}}
 async function fetchCats(){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`).then(d=>{cats[s]=d.rows;overlay()}).catch(()=>{cats[s]=[];});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
