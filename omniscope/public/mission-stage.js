@@ -17,35 +17,35 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  const sceneCaption=document.createElement('aside');sceneCaption.className='mission-scene-caption';sceneCaption.innerHTML='<strong>SPHEREx / Earth</strong>';ui.appendChild(sceneCaption);
  stage.querySelector('#stageSkyArea').onclick=()=>ui.querySelector('[data-panel="search"]').click();
  stage.querySelector('#stageBandSlot').appendChild(bandPanel);
- bandPanel.querySelector('.mission-band-top h4').textContent='02 / INFRARED BAND';
+ bandPanel.querySelector('.mission-band-top h4').textContent='02 / INFRARED DETECTOR';
  bandPanel.querySelector('.mission-band-top .calm-eyebrow').textContent='CHOOSE THE LIGHT';
  const a=$('stageDateA'),b=$('stageDateB'),band=$('missionBand'),visitButton=$('stageVisit'),replayButton=$('stageReplay'),toggle=$('missionEnlarge');
  const spectrum=document.createElement('div');spectrum.className='mission-spectrum';spectrum.innerHTML='<div class="mission-spectrum-head"><span>0.75 \u00b5m</span><strong id="missionSpectrumValue">Measured wavelength</strong><span>5.01 \u00b5m</span></div><div class="mission-spectrum-track"><span class="mission-spectrum-band"></span><span class="mission-spectrum-marker" id="missionSpectrumMarker"></span></div><div class="mission-spectrum-guide"><span>Shorter</span><span>Infrared light · \u00b5m = micrometre</span><span>Longer</span></div>';
  bandPanel.appendChild(spectrum);
  const bandChoices=document.createElement('div');bandChoices.className='stage-band-choices';bandChoices.setAttribute('role','group');bandChoices.setAttribute('aria-label','SPHEREx infrared bands');
  const bandRanges=['0.75–1.12','1.10–1.65','1.63–2.43','2.40–3.85','3.81–4.43','4.41–5.01'];
- for(let n=1;n<=6;n++){const button=document.createElement('button');button.type='button';button.dataset.band=String(n);button.innerHTML=`<strong>${String(n).padStart(2,'0')}</strong><small>${bandRanges[n-1]} µm</small>`;button.setAttribute('aria-label',`Band ${n}, ${bandRanges[n-1]} micrometers`);button.onclick=()=>{if(band.disabled)return;band.value=String(n);band.dispatchEvent(new Event('change',{bubbles:true}));};bandChoices.appendChild(button);}
+ for(let n=1;n<=6;n++){const button=document.createElement('button');button.type='button';button.dataset.band=String(n);button.innerHTML=`<strong>${String(n).padStart(2,'0')}</strong><small>${bandRanges[n-1]} µm</small>`;button.setAttribute('aria-label',`Detector ${n}, ${bandRanges[n-1]} micrometers`);button.onclick=()=>{if(band.disabled)return;band.value=String(n);band.dispatchEvent(new Event('change',{bubbles:true}));};bandChoices.appendChild(button);}
  bandPanel.querySelector('.mission-band-top').after(bandChoices);
  const bandRange=document.createElement('div');bandRange.className='stage-selected-range';bandRange.innerHTML='<span class="stage-range-text"></span><svg class="stage-wave" viewBox="0 0 92 26" role="img" aria-label="Relative infrared wave spacing"><path class="stage-wave-path"/></svg>';bandChoices.after(bandRange);
  const wavePath=bandRange.querySelector('.stage-wave-path');
  let activeChannel=0,channelText='';
- function syncBandChoices(){for(const button of bandChoices.children){const active=button.dataset.band===band.value;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.disabled=band.disabled;}bandRange.querySelector('.stage-range-text').textContent=channelText||`Band ${band.value} · ${bandRanges[Number(band.value)-1]} µm`;}
+ function syncBandChoices(){for(const button of bandChoices.children){const active=button.dataset.band===band.value;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.disabled=band.disabled;}bandRange.querySelector('.stage-range-text').textContent=channelText||`Detector ${band.value} · ${bandRanges[Number(band.value)-1]} µm`;}
  syncBandChoices();
  const bands=[[.75,1.12],[1.10,1.65],[1.63,2.43],[2.40,3.85],[3.81,4.43],[4.41,5.01]];
  let activeBand=0;
  function updateBandRail(){const selected=Number(band.value);if(selected===activeBand)return;activeBand=selected;const [lo,hi]=bands[selected-1]||bands[1];spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);}
  updateBandRail();
- // 102-band picker: 17 channels inside each of the 6 detector bands (nominal log-spaced edges)
- const chanWrap=document.createElement('div');chanWrap.className='stage-channels';
- chanWrap.innerHTML='<div class="stage-channels-head"><span>Channel · 17 per band = 102 total</span><button type="button" data-ch="0" class="active">All</button></div><div class="stage-channel-grid"></div>';
+ // Approximate wavelength windows within each detector range.
+ const chanWrap=document.createElement('details');chanWrap.className='stage-channels';
+ chanWrap.innerHTML='<summary>Narrow wavelength</summary><div class="stage-channels-head"><span>Approximate wavelength windows</span><button type="button" data-ch="0" class="active">Reset</button></div><div class="stage-channel-grid"></div>';
  const chanGrid=chanWrap.querySelector('.stage-channel-grid');
  const chEdge=(d,i)=>{const [lo,hi]=bands[d-1]||bands[1];return lo*Math.pow(hi/lo,i/17)};
- function drawChannels(){chanGrid.innerHTML='';const d=Number(band.value)||2;for(let c=1;c<=17;c++){const lo=chEdge(d,c-1),hi=chEdge(d,c),b=document.createElement('button');b.type='button';b.dataset.ch=String(c);b.textContent=String(c);b.title=`Band ${(d-1)*17+c} of 102 \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;b.setAttribute('aria-label',b.title);b.classList.toggle('active',c===activeChannel);b.onclick=()=>pickChannel(c);chanGrid.appendChild(b);}chanWrap.querySelector('[data-ch="0"]').classList.toggle('active',!activeChannel);}
+ function drawChannels(){chanGrid.innerHTML='';const d=Number(band.value)||2;for(let c=1;c<=17;c++){const lo=chEdge(d,c-1),hi=chEdge(d,c),b=document.createElement('button');b.type='button';b.dataset.ch=String(c);b.textContent=String(c);b.title=`Window ${c} \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;b.setAttribute('aria-label',b.title);b.classList.toggle('active',c===activeChannel);b.onclick=()=>pickChannel(c);chanGrid.appendChild(b);}chanWrap.querySelector('[data-ch="0"]').classList.toggle('active',!activeChannel);}
  function pickChannel(c){if(band.disabled)return;activeChannel=c;const d=Number(band.value)||2,w=$('spectralWavelength'),sw=$('spectralWidth');
   if(c){const lo=chEdge(d,c-1),hi=chEdge(d,c);if(w){w.value=String((lo+hi)/2);w.dispatchEvent(new Event('input',{bubbles:true}));}
-   if(sw){let o=sw.querySelector('[data-ch]');if(!o){o=document.createElement('option');o.dataset.ch='1';sw.appendChild(o);}o.value=String(hi-lo);o.textContent='Channel width';sw.value=o.value;sw.dispatchEvent(new Event('change',{bubbles:true}));}
+   if(sw){let o=sw.querySelector('[data-ch]');if(!o){o=document.createElement('option');o.dataset.ch='1';sw.appendChild(o);}o.value=String(hi-lo);o.textContent='Window width';sw.value=o.value;sw.dispatchEvent(new Event('change',{bubbles:true}));}
    spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);
-   channelText=`Band ${(d-1)*17+c} of 102 \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;syncBandChoices();}
+   channelText=`Window ${c} \u00b7 ${lo.toFixed(2)}\u2013${hi.toFixed(2)} \u00b5m`;syncBandChoices();}
   else{channelText='';const [lo,hi]=bands[d-1]||bands[1];if(sw){sw.value='.14';sw.dispatchEvent(new Event('change',{bubbles:true}));}spectrum.style.setProperty('--band-start',`${(lo-.75)/4.26*100}%`);spectrum.style.setProperty('--band-width',`${(hi-lo)/4.26*100}%`);syncBandChoices();}
   drawChannels();}
  chanWrap.querySelector('[data-ch="0"]').onclick=()=>pickChannel(0);
