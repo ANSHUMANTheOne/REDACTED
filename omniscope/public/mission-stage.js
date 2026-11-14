@@ -4,7 +4,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  const stage=document.createElement('section');
  stage.className='mission-stage';
  stage.setAttribute('aria-label','Choose a SPHEREx observation');
- stage.innerHTML=`<div class="mission-stage-head"><div><span class="stage-kicker">SPHEREx / Planet X</span><h3>Vela field</h3></div><button id="stageSkyArea" type="button">Change sky field ↗</button></div>
+ stage.innerHTML=`<div class="mission-stage-head"><div><span class="stage-kicker">SPHEREx / Planet X</span><h3>Vela field</h3></div></div>
  <div class="stage-field"><span class="stage-step">01 / SKY FIELD</span><span id="stageField">Opening archive…</span></div>
  <div id="stageBandSlot"></div>
  <details class="stage-visit-details"><summary id="visitSummary">03 / OBSERVATIONS <span>Using the first two visits</span></summary><div class="mission-stage-pickers"><label>Earlier visit<select id="stageDateA" aria-label="Earlier observation date"></select></label><label>Later visit<select id="stageDateB" aria-label="Later observation date"></select></label></div></details>
@@ -15,7 +15,6 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  stage.addEventListener('pointermove',event=>{const rect=stage.getBoundingClientRect();stage.style.setProperty('--glass-x',`${event.clientX-rect.left}px`);stage.style.setProperty('--glass-y',`${event.clientY-rect.top}px`);});
  stage.addEventListener('pointerleave',()=>{stage.style.removeProperty('--glass-x');stage.style.removeProperty('--glass-y');});
  const sceneCaption=document.createElement('aside');sceneCaption.className='mission-scene-caption';sceneCaption.innerHTML='<strong>SPHEREx / Earth</strong>';ui.appendChild(sceneCaption);
- stage.querySelector('#stageSkyArea').onclick=()=>ui.querySelector('[data-panel="search"]').click();
  stage.querySelector('#stageBandSlot').appendChild(bandPanel);
  bandPanel.querySelector('.mission-band-top h4').textContent='02 / INFRARED DETECTOR';
  bandPanel.querySelector('.mission-band-top .calm-eyebrow').textContent='CHOOSE THE LIGHT';

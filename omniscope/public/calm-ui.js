@@ -14,7 +14,7 @@ export function installCalmUI({ui,c,grid,setPerspective,getComparison,markSample
  for(const [name,panel] of Object.entries(panels)){panel.id=panel.id||`calm-${name}-panel`;panel.classList.add('calm-panel');panel.setAttribute('aria-label',panel.querySelector('.calm-panel-header h2').textContent);panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-hidden','true');panel.inert=true;panel.querySelector('.calm-close').onclick=()=>close();}
  const backdrop=make('button',{className:'calm-backdrop',tabIndex:-1});backdrop.setAttribute('aria-label','Close tool panel');backdrop.hidden=true;backdrop.onclick=()=>close();ui.appendChild(backdrop);
  const intro=make('div',{className:'calm-intro'});intro.innerHTML='<span class="calm-eyebrow">OMNISCOPE EXPLORER</span><h2 id="calmTitle">Explore our solar system.</h2><p id="calmHint">Drag to orbit. Scroll to zoom. Select a planet.</p>';ui.appendChild(intro);
- const actions=make('div',{className:'calm-primary-actions'});actions.innerHTML='<button data-panel="search" class="calm-button emphasis" aria-expanded="false">⌕ <span>Find sky images</span></button><button data-panel="observation" class="calm-button" aria-expanded="false">◧ <span>Observation</span></button>';ui.appendChild(actions);
+ const actions=make('div',{className:'calm-primary-actions'});actions.innerHTML='<button data-panel="observation" class="calm-button" aria-expanded="false">◧ <span>Observation</span></button>';ui.appendChild(actions);
  const utility=make('div',{className:'calm-utility'});utility.innerHTML='<button id="calmHome" aria-label="Reset view" title="Reset view">⌂</button><button data-panel="options" aria-expanded="false" title="View settings">⚙ <span>Settings</span></button><button id="calmHelp" aria-label="How to explore" title="How to explore">?</button>';ui.appendChild(utility);
  const provenance=make('button',{className:'calm-provenance',textContent:'NASA JPL positions · NASA/IPAC imagery'});provenance.onclick=()=>$('surveyMethods').click();ui.appendChild(provenance);
  $('calmHome').onclick=()=>$('resetCamera').click();
@@ -84,7 +84,6 @@ export function installCalmUI({ui,c,grid,setPerspective,getComparison,markSample
  intro.querySelector('.calm-eyebrow').textContent='PLANET X / SPHEREX';
  $('calmTitle').textContent='SPHEREx survey';
  $('calmHint').textContent='';
- actions.querySelector('[data-panel="search"] span').textContent='Choose sky field';
  actions.querySelector('[data-panel="observation"]').hidden=true;
  card.querySelector('.mission-comparison-head .calm-eyebrow').textContent='SPHEREX / OBSERVATION PAIR';
  card.querySelector('.mission-comparison-head h3').textContent='Observation analysis';
