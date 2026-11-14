@@ -4,7 +4,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  const stage=document.createElement('section');
  stage.className='mission-stage';
  stage.setAttribute('aria-label','Choose a SPHEREx observation');
- stage.innerHTML=`<div class="mission-stage-head"><div><span class="stage-kicker">SPHEREx / Planet X</span><h3>Vela example</h3></div></div>
+ stage.innerHTML=`<div class="mission-stage-head"><div><span class="stage-kicker">Planet X</span><h3>SPHEREx observations</h3></div></div>
  <div class="stage-field"><span class="stage-step">01 / SKY FIELD</span><span id="stageField">Opening archive…</span></div>
  <div id="stageBandSlot"></div>
  <details class="stage-visit-details"><summary id="visitSummary">03 / OBSERVATIONS <span>Using the first two visits</span></summary><div class="mission-stage-pickers"><label>Earlier visit<select id="stageDateA" aria-label="Earlier observation date"></select></label><label>Later visit<select id="stageDateB" aria-label="Later observation date"></select></label></div></details>
@@ -88,7 +88,11 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  function choices(data){const signature=data.detector+'|'+data.choices.map(r=>r.id+':'+r.date).join('|');if(signature===lastSignature){if(!busy&&!data.busy)for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]])if(selected>=0&&select.value!==String(selected))select.value=String(selected);return;}lastSignature=signature;for(const [select,selected] of [[a,data.selectedChoices[0]],[b,data.selectedChoices[1]]]){select.replaceChildren();for(const item of data.choices){const option=document.createElement('option');option.value=String(item.index);option.textContent=`${item.date} · ${item.id||'observation '+(item.index+1)}`;select.appendChild(option);}select.value=String(selected??'');}
   a.disabled=b.disabled=data.choices.length<2||busy;const first=data.choices.find(item=>item.index===Number(a.value)),second=data.choices.find(item=>item.index===Number(b.value));const summary=$('visitSummary').querySelector('span');summary.textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';}
  function update(time){const data=getComparison();choices(data);const first=data.choices.find(item=>item.index===data.selectedChoices[0]),second=data.choices.find(item=>item.index===data.selectedChoices[1]);$('visitSummary').querySelector('span').textContent=first&&second?`${first.date} → ${second.date}`:'Choose two visits';visitButton.disabled=busy||data.busy||data.images.length!==2;stageTimeLapse.disabled=visitButton.disabled;cardReplay.disabled=visitButton.disabled;timeLapse.disabled=visitButton.disabled;band.disabled=busy||data.busy;
-  if(data.field){$('stageField').textContent=`RA ${data.field.ra.toFixed(3)}° · Dec ${data.field.dec.toFixed(3)}°`;stage.querySelector('h3').textContent=Math.abs(data.field.ra-127.69444)<.01&&Math.abs(data.field.dec+39.1776)<.01?'Vela example':'Selected field';}
+  if(data.field){
+   const isVela=Math.abs(data.field.ra-127.69444)<.01&&Math.abs(data.field.dec+39.1776)<.01;
+   $('stageField').textContent=isVela?'Vela':`RA ${data.field.ra.toFixed(3)}° · Dec ${data.field.dec.toFixed(3)}°`;
+   $('stageField').title=`RA ${data.field.ra.toFixed(3)}° · Dec ${data.field.dec.toFixed(3)}°`;
+  }
   if(playing&&(data.busy||data.images.length!==2))stop();
   let index=data.visit,progress=.5;
   if(playing){const cycle=(time-started)/4600,indexNow=Math.floor(cycle)%2;progress=cycle%1;index=indexNow;if(lastIndex!==index){lastIndex=index;selectVisit(index?'B':'A');}setStoryState({playing:true,selectedVisit:index,progress});}
