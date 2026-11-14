@@ -19,7 +19,7 @@ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('
 const btn=Object.assign(document.createElement('button'),{id:'tlOpen',textContent:'▶ Time-lapse lab',title:'SPHEREx multi-epoch movie, stacking and spectra'});
 root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
-<ol class="tl-steps"><li>Pick a target on the right</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, then press “Load SPHEREx images”.</span></div></div>
+<ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Load SPHEREx images”.</span></div></div>
 <div class="tl-play"><button id="tlPlay">▶</button><input id="tlSlide" type="range" min="0" max="0" value="0"><select id="tlFps"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
 <div id="tlInfo" class="tl-info">Pick a target to begin.</div><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
@@ -37,15 +37,17 @@ const actions = document.querySelector('.mission-stage-actions');
 if (actions) actions.after(btn);
 else document.body.append(btn);
 document.body.append(root);
+root.querySelector('.tl-grid').prepend(root.querySelector('.tl-ctl'));
+root.querySelector('.tl-row:has(#tlDec)').after(root.querySelector('#tlLoad'));
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
 async function api(path,asJson=1){const r=await fetch(API+path,{signal:AbortSignal.timeout(70000)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
 async function sia(ra,dec){const out=new Map();await Promise.all(COLLECTIONS.map(async c=>{try{const r=await fetch(API+'/archive?'+new URLSearchParams({ra,dec,collection:c}));if(!r.ok)return;const d=new DOMParser().parseFromString(await r.text(),'application/xml'),f=[...d.getElementsByTagName('FIELD')].map(x=>x.getAttribute('name'));for(const tr of d.getElementsByTagName('TR')){const o=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[f[i],td.textContent]));if(o.access_url&&Number.isFinite(+o.t_min))out.set(o.access_url,o)}}catch{}}));return [...out.values()].sort((a,b)=>a.t_min-b.t_min)}
 async function loadAll(){
- if(busy)return;const ra=+$('#tlRa').value,dec=+$('#tlDec').value,fov=+$('#tlFov').value;
+ if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
  busy=1;$('#tlLoad').disabled=true;stop();frames=[];groups=[];cache.clear();cats={};pin=null;movers=[];renderMovers();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
- try{set('Searching the SPHEREx archive…');let rows=await sia(ra,dec);const d=+$('#tlDet').value;if(d)rows=rows.filter(r=>r.energy_bandpassname===`SPHEREx-D${d}`);
+ try{set('Searching the SPHEREx archive…');let rows=await sia(ra,dec);const d=bandSel()?.d || +$('#tlDet').value;if(d)rows=rows.filter(r=>r.energy_bandpassname===`SPHEREx-D${d}`);
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
   const MAX=48;if(rows.length>MAX)rows=rows.filter((_,i)=>Math.floor(i*MAX/rows.length)!==Math.floor((i-1)*MAX/rows.length)||i===0||i===rows.length-1);
   let done=0;const queue=[...rows];$('#tlBusy').hidden=false;

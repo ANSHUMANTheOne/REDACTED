@@ -4,7 +4,7 @@
 #tlLab::backdrop{background:#000b}
 .tl-head{display:flex;justify-content:space-between;align-items:flex-start}.tl-head h2{margin:2px 0 10px;font-weight:500;font-size:24px;letter-spacing:-.02em}
 .tl-o{font:9px ui-monospace,monospace;color:#8ae5d8;letter-spacing:.14em}.tl-x{background:none;border:0;color:#bbcece;font-size:26px;cursor:pointer}
-.tl-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(240px,1fr);gap:16px}@media(max-width:760px){.tl-grid{grid-template-columns:1fr}}
+.tl-grid{display:grid;grid-template-columns:minmax(240px,1fr) minmax(0,1.2fr);gap:16px}@media(max-width:760px){.tl-grid{grid-template-columns:1fr}}
 .tl-stage{position:relative;aspect-ratio:1;background:#02060b;border:1px solid #2c4a52;cursor:crosshair}.tl-stage canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
 #tlOv{image-rendering:auto}#tlBusy{position:absolute;inset:auto 0 0;background:#000a;padding:6px;text-align:center;font:11px ui-monospace,monospace}
 .tl-play{display:flex;gap:8px;margin:8px 0}.tl-play input{flex:1}
