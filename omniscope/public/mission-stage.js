@@ -8,7 +8,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  <div class="stage-field"><span class="stage-step">01 / SKY FIELD</span><span id="stageField">Opening archive…</span></div>
  <div id="stageBandSlot"></div>
  <details class="stage-visit-details"><summary id="visitSummary">03 / OBSERVATIONS <span>Using the first two visits</span></summary><div class="mission-stage-pickers"><label>Earlier visit<select id="stageDateA" aria-label="Earlier observation date"></select></label><label>Later visit<select id="stageDateB" aria-label="Later observation date"></select></label></div></details>
- <button id="stageLatest" class="stage-latest" type="button">Explore latest SPHEREx images <span aria-hidden="true">↗</span></button>
+ <button id="stageLatest" class="stage-latest" type="button">New SPHEREx data: DR1 <span aria-hidden="true">↗</span></button>
  <div class="mission-stage-actions"><button id="stageTimeLapse" class="stage-primary">▶ Time-lapse</button><button id="stageVisit" class="stage-secondary">Compare images</button></div>
  <div class="mission-stage-readout" aria-live="off"><strong id="stageWave">Measured wavelength will appear here.</strong><span id="stageTime">Loading the selected visits…</span><span id="stageCoords">Recorded spacecraft position loads with each image.</span></div>
  <p class="mission-stage-note">Position from FITS metadata. Diagram not to scale.</p>`;
@@ -62,7 +62,7 @@ export function installMissionStage({ui,card,bandPanel,getComparison,scanSample,
  stageTimeLapse.onclick=timeLapse.onclick;
  $('stageLatest').onclick=async()=>{
   const lab=await import('./timelapse-lab.js');
-  lab.openLatest();
+  lab.openReleasePreview();
  };
  const cardReplay=document.createElement('button');cardReplay.id='missionReplay';cardReplay.type='button';cardReplay.textContent='▶ Motion preview';cardReplay.title='Replay both recorded exposures';cardReplay.setAttribute('aria-label','Replay observation');cardReplay.setAttribute('aria-pressed','false');toggle.before(cardReplay);
  toggle.hidden=false;

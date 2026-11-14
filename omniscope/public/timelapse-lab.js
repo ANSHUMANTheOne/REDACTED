@@ -128,6 +128,28 @@ async function openPreset(index,showLatest=false){if(busy)return;const p=PRESETS
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
  $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
 root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPreset(Number(b.dataset.p)));
+export async function openReleasePreview(){
+ if(!root.open)root.showModal();
+ if(busy)return;
+ busy=1;stop();
+ $('#tlLoad').disabled=true;
+ $('#tlEmpty').hidden=false;
+ set('Opening the bundled DR1 image…');
+ try{
+  const response=await fetch(new URL('./data/barnard-dr1.fits',import.meta.url));
+  if(!response.ok)throw Error('The DR1 preview could not be loaded. Try again.');
+  const image=parseFits(await response.arrayBuffer());
+  const ra=269.4463,dec=4.7677,fov=.2;
+  const sample=spectralProject(image,ra,dec,fov,N);
+  const t=Date.parse(image.h['DATE-AVG']+'Z')/86400000+40587;
+  $('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
+  busy=0;
+  openComparison({field:{ra,dec},fov,detector:3,exposures:[{sample,t,url:'https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2026W19_1A/l2b-v27-2026-245/3/level2_2026W19_1A_0403_1D3_spx_l2b-v27-2026-245.fits'}]});
+  $('#tlName').value="Barnard's Star";
+  set("Barnard’s Star · DR1 · observed "+iso(t)+" UTC");
+ }catch(error){set(error.message,1);}
+ finally{busy=0;$('#tlLoad').disabled=false;}
+}
 export function openLatest(){
  if(!root.open)root.showModal();
  if(busy)return;
@@ -143,7 +165,7 @@ if(q.get('lab')||q.has('ra')){for(const [p,id] of [['ra','#tlRa'],['dec','#tlDec
  const openShared=()=>{if(!root.open)root.showModal();if(q.has('ra')&&q.has('dec'))loadAll();else if(q.get('name'))$('#tlRes').click()};
  if(document.readyState==='complete')queueMicrotask(openShared);else addEventListener('load',openShared,{once:true});}
 export function openComparison(data) {
- if(busy || data.exposures.length<2) {
+ if(busy || !data.exposures.length) {
   if(!root.open) root.showModal();
   return;
  }
@@ -155,6 +177,8 @@ export function openComparison(data) {
  renderMovers();
  $('#tlRa').value=ra;$('#tlDec').value=dec;$('#tlName').value='';
  $('#tlDet').value=String(data.detector);
+ if(![...$('#tlFov').options].some(option=>Number(option.value)===fov))$('#tlFov').add(new Option(fov+'°',String(fov)));
+ $('#tlFov').value=[...$('#tlFov').options].find(option=>Number(option.value)===fov).value;
  $('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
  syncMap();
  frames=data.exposures.map(({sample,t,url})=>{

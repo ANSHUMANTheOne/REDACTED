@@ -3016,5 +3016,29 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
+<dialog id="releaseNotice" aria-labelledby="releaseTitle" style="max-width:340px;width:calc(100% - 48px);background:#132630;color:#e7f3f5;border:1px solid #66818a;border-radius:16px;padding:22px">
+ <h2 id="releaseTitle" style="margin:0">New SPHEREx data</h2>
+ <p>Want to see an image from Data Release 1? NASA/IPAC announced the release on November 12, 2026.</p>
+ <form method="dialog" style="display:flex;gap:10px;flex-wrap:wrap">
+  <button value="view" autofocus>View DR1 image</button>
+  <button value="dismiss">Not now</button>
+ </form>
+</dialog>
+<script type="module">
+ const notice=document.getElementById('releaseNotice');
+ const query=new URLSearchParams(location.search);
+ const key='omniscope-dr1-notice';
+ notice.addEventListener('close',()=>{
+  try{sessionStorage.setItem(key,'seen');}catch{}
+  if(notice.returnValue==='view')import('./timelapse-lab.js').then(lab=>lab.openReleasePreview());
+ });
+ let seen=false;
+ try{seen=sessionStorage.getItem(key)==='seen';}catch{}
+ if(!seen&&!query.has('lab')&&!query.has('ra')){
+  const showNotice=()=>notice.showModal();
+  if(document.readyState==='complete')showNotice();
+  else addEventListener('load',showNotice,{once:true});
+ }
+</script>
 </body>
 </html>
