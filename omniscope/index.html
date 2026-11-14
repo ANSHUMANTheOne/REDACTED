@@ -3024,21 +3024,6 @@ window.addEventListener('resize', () => {
   <button value="dismiss">Not now</button>
  </form>
 </dialog>
-<script type="module">
- const notice=document.getElementById('releaseNotice');
- const query=new URLSearchParams(location.search);
- const key='omniscope-dr1-notice';
- notice.addEventListener('close',()=>{
-  try{sessionStorage.setItem(key,'seen');}catch{}
-  if(notice.returnValue==='view')import('./timelapse-lab.js').then(lab=>lab.openReleasePreview());
- });
- let seen=false;
- try{seen=sessionStorage.getItem(key)==='seen';}catch{}
- if(!seen&&!query.has('lab')&&!query.has('ra')){
-  const showNotice=()=>notice.showModal();
-  if(document.readyState==='complete')showNotice();
-  else addEventListener('load',showNotice,{once:true});
- }
-</script>
+
 </body>
 </html>

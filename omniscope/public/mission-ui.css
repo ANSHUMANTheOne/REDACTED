@@ -125,6 +125,6 @@ html,body,.unified-mission{background:#0b1118}
 .mission-scene-caption:has(.live-orbit-toggle){pointer-events:auto}
 .mission-scene-caption small:not([hidden]){display:block;margin-top:5px;color:#a8cddb}
 
-.unified-mission .stage-latest{width:100%;min-height:44px;margin-top:12px;padding:8px 12px;border:1px solid #b68b6c;border-radius:8px;background:#efc49e;color:#18222a;font:inherit;font-weight:700;cursor:pointer}
-.unified-mission .stage-latest:hover{background:#ffdbba}
+.unified-mission .stage-latest{display:block;width:fit-content;min-height:36px;margin:4px 0 0;padding:6px 0;border:0;background:transparent;color:#bbd1d8;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.unified-mission .stage-latest:hover{color:#ffdbba}
 .unified-mission:has(.mission-comparison:not(.is-collapsed)) .stage-latest{display:none}
