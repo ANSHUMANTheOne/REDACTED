@@ -9,10 +9,10 @@ const DET=[[.75,1.12],[1.10,1.65],[1.63,2.43],[2.40,3.85],[3.81,4.43],[4.41,5.01
 const BANDS=DET.flatMap(([lo,hi],d)=>Array.from({length:17},(_,c)=>{const e=i=>lo*(hi/lo)**(i/17);return {d:d+1,c:c+1,lo:e(c),hi:e(c+1)}}));
 const PRESETS=[
  {n:"Barnard's Star",ra:269.45208,dec:4.69339,pm:[-798.6,10328.9],ep:2000},
- {n:'Epsilon Indi B',ra:331.0437,dec:-56.7828,pm:[3966,-2536],ep:2000,q:'eps Ind B'},
+ {n:'Epsilon Indi B',ra:331.0437,dec:-56.7828,pm:[3966,-2536],ep:2000},
  {n:'WISE 0855',ra:133.79513,dec:-7.24515,pm:[-8118,680],ep:2014},
- {n:'RW Aurigae',ra:76.95654,dec:30.40144,q:'RW Aur'},
- {n:'R Draconis',ra:248.1722,dec:66.7547,q:'R Dra'}];
+ {n:'RW Aurigae',ra:76.95654,dec:30.40144},
+ {n:'R Draconis',ra:248.1722,dec:66.7547}];
 const N=220,$=s=>root.querySelector(s),yr=m=>2000+(m-51544.5)/365.25,iso=m=>new Date((m-40587)*864e5).toISOString().slice(0,10);
 let movers=[],root,frames=[],groups=[],k=0,timer=null,field=null,hdr=null,pin=null,target=null,cats={},busy=0,cache=new Map();
 const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./timelapse-lab.css',import.meta.url).href;document.head.append(css);
@@ -36,19 +36,37 @@ root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx
 const actions = document.querySelector('.mission-stage-actions');
 if (!actions) document.body.append(btn);
 document.body.append(root);
-root.addEventListener('close',stop);
+root.addEventListener('close',()=>{stop();cancelLoad();});
 root.querySelector('.tl-grid').prepend(root.querySelector('.tl-ctl'));
 
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
-async function api(path,asJson=1,timeout=70000){const r=await fetch(API+path,{signal:AbortSignal.timeout(timeout)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
-async function sia(ra,dec,detector){
+let activeLoad;
+function cancelLoad(){
+ activeLoad?.abort();
+ activeLoad=null;
+ busy=0;
+ $('#tlLoad').disabled=false;
+ $('#tlBusy').hidden=true;
+}
+function startLoad(){
+ cancelLoad();
+ activeLoad=new AbortController();
+ busy=1;
+ return activeLoad.signal;
+}
+function requestSignal(timeout,signal){
+ const deadline=AbortSignal.timeout(timeout);
+ return signal?AbortSignal.any([deadline,signal]):deadline;
+}
+async function api(path,asJson=1,timeout=70000,signal){const r=await fetch(API+path,{signal:requestSignal(timeout,signal)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
+async function sia(ra,dec,detector,signal){
  const out=new Map();
  async function query(collections){
   await Promise.all(collections.map(async collection=>{
    try{
     const url=API+'/archive?'+new URLSearchParams({ra,dec,collection});
-    const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
+    const response=await fetch(url,{signal:requestSignal(12000,signal)});
     if(!response.ok)return;
     const doc=new DOMParser().parseFromString(await response.text(),'application/xml');
     const fields=[...doc.getElementsByTagName('FIELD')].map(field=>field.getAttribute('name'));
@@ -60,14 +78,15 @@ async function sia(ra,dec,detector){
   }));
  }
  await query(COLLECTIONS.filter(collection=>!collection.endsWith('_deep')));
- if(out.size<2)await query(COLLECTIONS.filter(collection=>collection.endsWith('_deep')));
+ if(!signal.aborted&&out.size<2)await query(COLLECTIONS.filter(collection=>collection.endsWith('_deep')));
  return [...out.values()].sort((a,b)=>a.t_min-b.t_min);
 }
 async function loadAll(showLatest=false,keepPreview=false){
- if(busy)return;const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
+ const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
- busy=1;datePicked=false;$('#tlLoad').disabled=true;stop();if(!keepPreview){frames=[];groups=[];$('#tlReleaseNote').hidden=true;}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
- try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d);
+ const signal=startLoad();datePicked=false;stop();if(!keepPreview){frames=[];groups=[];$('#tlReleaseNote').hidden=true;}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
+ try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d,signal);
+  if(signal.aborted)return;
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
   const MAX=24;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
@@ -89,13 +108,14 @@ async function loadAll(showLatest=false,keepPreview=false){
    }
    lastPublished=frames.length;
   }
-  await Promise.all(Array.from({length:Math.min(parallelDownloads,queue.length)},async()=>{while(queue.length){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0,22000)),s=spectralProject(p,ra,dec,fov,N);frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){console.warn(e)}done++;
+  await Promise.all(Array.from({length:Math.min(parallelDownloads,queue.length)},async()=>{while(queue.length&&!signal.aborted){const r=queue.shift();try{const p=parseFits(await api('/archive?'+new URLSearchParams({ra,dec,file:new URL(r.access_url).pathname,size:Math.min(.8,fov*1.15)}),0,22000,signal)),s=spectralProject(p,ra,dec,fov,N);if(signal.aborted)return;frames.push({t:+r.t_min,det:+String(r.energy_bandpassname).slice(-1),v:s.values,w:s.wavelength,f:s.flags,url:r.access_url,date:p.h['DATE-AVG']||iso(+r.t_min)})}catch(e){if(signal.aborted)return;console.warn(e)}done++;
    if(frames.length>lastPublished&&(groups.length<2||frames.length-lastPublished>=4))publish();
    $('#tlBusy').textContent=groups.length>=2?`Ready to play · loading more (${done}/${rows.length})`:`Loading exposures ${done}/${rows.length}`}}));
+  if(signal.aborted)return;
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  publish();fetchCats();if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
- catch(e){set(keepPreview?'DR1 preview shown. The live archive could not add more observations.':e.message,1);$('#tlBusy').hidden=true}finally{busy=0;$('#tlLoad').disabled=false}}
-async function fetchCats(){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`).then(d=>{cats[s]=d.rows;overlay()}).catch(()=>{cats[s]=[];});}
+  publish();fetchCats(signal);if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
+ catch(e){if(signal.aborted)return;set(keepPreview?'DR1 preview shown. The live archive could not add more observations.':e.message,1);$('#tlBusy').hidden=true}finally{if(!signal.aborted)busy=0}}
+async function fetchCats(signal){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`,1,15000,signal).then(d=>{if(!signal.aborted){cats[s]=d.rows;overlay();}}).catch(()=>{});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
 function zImage(f){ // robust-normalised image (σ units) after flag and band masks
  const key=$('#tlBand').value+':'+$('#tlFlag').checked;const cached=cache.get(f);if(cached?.key===key)return cached.z;const b=bandSel(),m=$('#tlFlag').checked,n=N*N,z=new Float32Array(n).fill(NaN),ok=[];
@@ -126,6 +146,7 @@ $('#tlDates').onchange=event=>seek(Number(event.target.value));
 $('#tlPrev').onclick=()=>seek(k-1);
 $('#tlNext').onclick=()=>seek(k+1);
 function build(current=groups[k]?.m[0]){
+ if(movers.length){movers=[];renderMovers();}
  const bin=+$('#tlBin').value,list=frames.filter(f=>zImage(f).some(Number.isFinite)),g=new Map();
  for(const f of list){const key=bin===-1?'d'+f.det:bin>0?f.det+'|'+Math.floor((f.t-frames[0].t)/bin):frames.indexOf(f);(g.get(key)||g.set(key,[]).get(key)).push(f)}
  groups=[...g.values()].map(m=>({m,t:m.reduce((a,f)=>a+f.t,0)/m.length,det:new Set(m.map(f=>f.det)).size==1?m[0].det:0,z:null})).sort((a,b)=>a.t-b.t);
@@ -171,7 +192,6 @@ $('#tlFps').onchange=()=>{if(timer){stop();$('#tlPlay').click()}};$('#tlSlide').
 for(const id of ['#tlMode','#tlBin','#tlBand','#tlFlag'])$(id).onchange=()=>{build()};for(const id of ['#tlGaia','#tlWise'])$(id).onchange=overlay;
 $('#tlCoordinates').onsubmit=event=>{
  event.preventDefault();
- if(busy)return;
  if($('#tlRa').valueAsNumber>=360){
   $('#tlRa').setCustomValidity('Enter a right ascension below 360 degrees.');
   $('#tlRa').reportValidity();
@@ -184,20 +204,22 @@ $('#tlCoordinates').onsubmit=event=>{
 $('#tlRa').addEventListener('input',()=>$('#tlRa').setCustomValidity(''));
 async function resolve(name){const d=await api('/catalog?name='+encodeURIComponent(name));return d}
 $('#tlRes').onclick=async()=>{try{const d=await resolve($('#tlName').value);$('#tlRa').setCustomValidity('');$('#tlRa').value=d.ra.toFixed(6);$('#tlDec').value=d.dec.toFixed(6);target=null;set('Resolved '+$('#tlName').value)}catch(e){set(e.message,1)}};
-async function openPreset(index,showLatest=false){if(busy)return;const p=PRESETS[index];let {ra,dec}=p;if(p.q)try{({ra,dec}=await resolve(p.q))}catch{}
+function openPreset(index,showLatest=false){const p=PRESETS[index];let {ra,dec}=p;
+ $('#tlBand').value='';
+ $('#tlDet').value=showLatest?'0':p.n==='WISE 0855'?'6':'3';
+ syncMap();
  target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
  $('#tlName').value=p.n;$('#tlRa').setCustomValidity('');$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
 root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPreset(Number(b.dataset.p)));
 export async function openReleasePreview(){
  if(!root.open)root.showModal();
- if(busy)return;
- busy=1;stop();
+ const signal=startLoad();stop();
  $('#tlLoad').disabled=true;
  $('#tlEmpty').hidden=false;
  set('Opening the bundled DR1 image…');
  try{
-  const response=await fetch(new URL('./data/barnard-dr1.fits',import.meta.url));
+  const response=await fetch(new URL('./data/barnard-dr1.fits',import.meta.url),{signal});
   if(!response.ok)throw Error('The DR1 preview could not be loaded. Try again.');
   const image=parseFits(await response.arrayBuffer());
   const ra=269.4463,dec=4.7677,fov=.2;
@@ -209,8 +231,8 @@ export async function openReleasePreview(){
   $('#tlName').value="Barnard's Star";
   $('#tlReleaseNote').hidden=false;
   set("Barnard’s Star · DR1 · observed "+iso(t)+" UTC");
- }catch(error){set(error.message,1);}
- finally{busy=0;$('#tlLoad').disabled=false;}
+ }catch(error){if(signal.aborted)return;set(error.message,1);}
+ finally{if(!signal.aborted){busy=0;$('#tlLoad').disabled=false;}}
  if(frames.length&&root.open)void loadAll(true,true);
 }
 export function openLatest(){
@@ -228,11 +250,12 @@ if(q.get('lab')||q.has('ra')){for(const [p,id] of [['ra','#tlRa'],['dec','#tlDec
  const openShared=()=>{if(!root.open)root.showModal();if(q.has('ra')&&q.has('dec'))loadAll();else if(q.get('name'))$('#tlRes').click()};
  if(document.readyState==='complete')queueMicrotask(openShared);else addEventListener('load',openShared,{once:true});}
 export function openComparison(data) {
- if(busy || !data.exposures.length) {
+ if(!data.exposures.length) {
   if(!root.open) root.showModal();
   return;
  }
  stop();
+ cancelLoad();
  $('#tlReleaseNote').hidden=true;
  const {ra,dec}=data.field,fov=data.fov;
  field={ra,dec,fov};
@@ -302,7 +325,8 @@ const mb=document.createElement('button');mb.id='tlMov';mb.className='tl-main';m
 const ml=document.createElement('div');ml.id='tlMovList';ml.className='tl-mov';chat.before(ml);
 function renderMovers(){const l=document.getElementById('tlMovList');if(!l)return;l.innerHTML='';movers.forEach((v,i)=>{const b=document.createElement('button');b.className='tl-mv';b.innerHTML=`<b>#${i+1}</b> ${v.kind==='variable'?'variable':'mover'} · D${v.det} · ${v.m.length} epochs${v.rate?' · '+v.rate.toFixed(1)+'″/yr':''}<br><small>${v.match||'no Gaia/AllWISE match — worth checking'} · RA ${v.ra.toFixed(4)} Dec ${v.dec.toFixed(4)}</small>`;b.onclick=()=>{k=v.m[0].g;pin={x:Math.round(v.m[0].x),y:Math.round(v.m[0].y)};draw();spectrum()};l.append(b)})}
 mb.onclick=()=>{
- if(!groups.length)return set('Load SPHEREx epochs first.',1);const px=field.fov*3600/(N-1);
+ stop();
+ if(!DET.some((_,i)=>new Set(groups.filter(g=>g.det===i+1).map(g=>iso(g.t))).size>=3))return set(busy?'Still loading. The scan needs three dates from one detector.':'The scan needs three dates from one detector. Select a detector and reload, or stack by exposure.',1);const px=field.fov*3600/(N-1);
  const tracks=findMovers(groups,N);if(!tracks.length){movers=[];renderMovers();overlay();return set('No consistent movers or variables found. Try a larger field, a single detector, or 30-day stacking to raise signal-to-noise.')}
  movers=tracks.map(v=>{const f=v.m[0],l=v.m.at(-1),mx=v.m.reduce((a,p)=>a+p.x,0)/v.m.length,my=v.m.reduce((a,p)=>a+p.y,0)/v.m.length,Y=yr(v.m.reduce((a,p)=>a+p.t,0)/v.m.length);
   const [ra,dec]=outputToWorld(mx,my,N,field.ra,field.dec,field.fov),rate=v.kind==='mover'?Math.hypot(l.x-f.x,l.y-f.y)*px/Math.max(.01,yr(l.t)-yr(f.t)):0;let match=null,bd=2.5;
@@ -343,6 +367,6 @@ function basic(q){
 
 // ---- 102-band map ----
 function syncMap(){const v=$('#tlBand').value;root.querySelectorAll('.tl-map [data-b]').forEach(b=>b.classList.toggle('on',b.dataset.b===v));const bd=bandSel();$('#tlBandLabel').textContent=bd?`Band ${(bd.d-1)*17+bd.c} of 102 · detector ${bd.d}, channel ${bd.c} · ${bd.lo.toFixed(2)}–${bd.hi.toFixed(2)} μm`:'All wavelengths (broadband)'}
-root.querySelectorAll('.tl-map [data-b]').forEach(b=>b.onclick=()=>{const v=b.dataset.b;$('#tlBand').value=v;syncMap();if(v){const d=v.split('-')[0];if($('#tlDet').value!==d){$('#tlDet').value=d;if(frames.length)return loadAll()}}if(frames.length)build()});
+root.querySelectorAll('.tl-map [data-b]').forEach(b=>b.onclick=()=>{const v=b.dataset.b;$('#tlBand').value=v;syncMap();if(v){const d=v.split('-')[0];if($('#tlDet').value!==d){$('#tlDet').value=d;if(frames.length||busy)return loadAll()}}if(frames.length)build()});
 $('#tlDet').addEventListener('change',()=>{const bd=bandSel();if(bd&&$('#tlDet').value!=='0'&&bd.d!==+$('#tlDet').value){$('#tlBand').value='';syncMap()}});
 syncMap();
