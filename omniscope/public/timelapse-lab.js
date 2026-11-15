@@ -90,6 +90,7 @@ async function loadAll(showLatest=false,keepPreview=false){
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
   const MAX=24;if(rows.length>MAX){const all=rows;rows=Array.from({length:MAX},(_,i)=>all[Math.round(i*(all.length-1)/(MAX-1))]);}
+  const initialFrames=frames.length;
   const parallelDownloads=4;
   let done=0,lastPublished=frames.length;
   // Prioritize a few dates across the full timeline, including its latest visit.
@@ -113,8 +114,8 @@ async function loadAll(showLatest=false,keepPreview=false){
    $('#tlBusy').textContent=groups.length>=2?`Ready to play · loading more (${done}/${rows.length})`:`Loading exposures ${done}/${rows.length}`}}));
   if(signal.aborted)return;
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  publish();fetchCats(signal);if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
- catch(e){if(signal.aborted)return;set(keepPreview?'DR1 preview shown. The live archive could not add more observations.':e.message,1);$('#tlBusy').hidden=true}finally{if(!signal.aborted)busy=0}}
+  publish();if(keepPreview&&frames.length===initialFrames)set('Bundled observations shown. No additional archive images could be read.',1);fetchCats(signal);if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
+ catch(e){if(signal.aborted)return;set(keepPreview?'Bundled observations shown. The live archive could not add more dates.':e.message,1);$('#tlBusy').hidden=true}finally{if(!signal.aborted)busy=0}}
 async function fetchCats(signal){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`,1,15000,signal).then(d=>{if(!signal.aborted){cats[s]=d.rows;overlay();}}).catch(()=>{});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
 function zImage(f){ // robust-normalised image (σ units) after flag and band masks
@@ -219,20 +220,28 @@ export async function openReleasePreview(){
  $('#tlEmpty').hidden=false;
  set('Opening the bundled DR1 image…');
  try{
-  const response=await fetch(new URL('./data/barnard-dr1.fits',import.meta.url),{signal});
-  if(!response.ok)throw Error('The DR1 preview could not be loaded. Try again.');
-  const image=parseFits(await response.arrayBuffer());
   const ra=269.4463,dec=4.7677,fov=.2;
-  const sample=spectralProject(image,ra,dec,fov,N);
-  const t=Date.parse(image.h['DATE-AVG']+'Z')/86400000+40587;
-  $('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
-  busy=0;
-  openComparison({field:{ra,dec},fov,detector:3,exposures:[{sample,t,url:'https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2026W19_1A/l2b-v27-2026-245/3/level2_2026W19_1A_0403_1D3_spx_l2b-v27-2026-245.fits'}]});
+  const files=[
+   {file:'barnard-dr1.fits',detector:3,path:'dr1/level2/2026W19_1A/l2b-v27-2026-245/3/level2_2026W19_1A_0403_1D3_spx_l2b-v27-2026-245.fits'},
+   {file:'barnard-qr3.fits',detector:1,path:'qr3/level2/2026W36_1A/l2b-v27-2026-252/1/level2_2026W36_1A_0510_1D1_spx_l2b-v27-2026-252.fits'}
+  ];
+  const results=await Promise.allSettled(files.map(async ({file,detector,path})=>{
+   const response=await fetch(new URL('./data/'+file,import.meta.url),{signal});
+   if(!response.ok)throw Error('Preview image unavailable.');
+   const image=parseFits(await response.arrayBuffer());
+   const sample=spectralProject(image,ra,dec,fov,N);
+   const t=Date.parse(image.h['DATE-AVG']+'Z')/86400000+40587;
+   return {sample,t,detector,url:'https://irsa.ipac.caltech.edu/ibe/data/spherex/'+path};
+  }));
+  if(signal.aborted)return;
+  const exposures=results.filter(result=>result.status==='fulfilled').map(result=>result.value);
+  if(!exposures.length)throw Error('The bundled Barnard’s Star images could not load. Try again.');
+  openComparison({field:{ra,dec},fov,detector:0,exposures});
   $('#tlRa').setCustomValidity('');
   $('#tlName').value=PRESETS[0].n;
   target=PRESETS[0];
   $('#tlReleaseNote').hidden=false;
-  set("Barnard’s Star · DR1 · observed "+iso(t)+" UTC");
+
   void loadAll(true,true);
  }catch(error){if(signal.aborted)return;set(error.message,1);}
  finally{if(!signal.aborted){busy=0;$('#tlLoad').disabled=false;}}
@@ -271,14 +280,14 @@ export function openComparison(data) {
  $('#tlFov').value=[...$('#tlFov').options].find(option=>Number(option.value)===fov).value;
  $('#tlBand').value='';$('#tlMode').value='movie';$('#tlBin').value='0';
  syncMap();
- frames=data.exposures.map(({sample,t,url})=>{
+ frames=data.exposures.map(({sample,t,url,detector})=>{
   const v=new Float32Array(N*N),w=new Float32Array(N*N),f=new Int32Array(N*N);
   for(let y=0;y<N;y++) for(let x=0;x<N;x++){
    const source=Math.round(y*(sample.n-1)/(N-1))*sample.n+Math.round(x*(sample.n-1)/(N-1));
    const dest=y*N+x;
    v[dest]=sample.values[source];w[dest]=sample.wavelength[source];f[dest]=sample.flags[source];
   }
-  return {t,url,det:data.detector,v,w,f};
+  return {t,url,det:detector??data.detector,v,w,f};
  });
  $('#tlEmpty').hidden=true;
  $('#tlPix').textContent='Click the image to see its spectrum.';
