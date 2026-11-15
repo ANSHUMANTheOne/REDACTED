@@ -46,3 +46,5 @@
 
 #tlCoordinates .tl-row label{flex:1;min-width:0}
 #tlCoordinates label input{display:block;margin-top:5px;box-sizing:border-box}
+
+#tlCoordinatesTitle{font-size:13px;margin:14px 0 0}
