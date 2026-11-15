@@ -152,7 +152,7 @@ export function installSurvey(c){
    c.sunMesh.visible=orbitContext;c.coronaMesh.visible=orbitContext;c.sunMesh.scale.setScalar(Math.min(5,.55+Math.max(0,sceneDistance-20)/160));c.coronaMesh.scale.multiplyScalar(Math.max(.5,Math.min(3,1+(sceneDistance-20)/250)));
    for(const [id,line] of Object.entries(orbitLines)){line.visible=orbitContext&&bodyMeshes[id]?.body.category==='planet'&&state.visibility.planet;if(line.visible)line.material.opacity=Math.min(.58,.26+sceneDistance/1600);}
   }else{for(const entry of Object.values(bodyMeshes))entry.group.scale.setScalar(1);c.sunMesh.scale.setScalar(1);}
-  if(document.body.classList.contains('unified-mission')){const W=innerWidth,H=innerHeight,comparisonOpen=!document.querySelector('.mission-comparison')?.classList.contains('is-collapsed'),framing=Math.min(1,Math.max(0,(sceneDistance-8.5)/55)),sceneOffset=W>800?(comparisonOpen?W*.29:-160*(1-framing)-W*.12*framing):0,frame=`${W}:${H}:${comparisonOpen}:${Math.round(sceneOffset)}`;if(state.mode==='pilot'){camera.clearViewOffset();camera.userData.missionSize=null;}else if(camera.userData.missionSize!==frame){camera.setViewOffset(W,H,sceneOffset,W>800?0:H*.14,W,H);camera.userData.missionSize=frame;}if(c.missionMeshes.spherex.orbitLine)c.missionMeshes.spherex.orbitLine.visible=false;c.missionMeshes.spherex.group.visible=true;const index=storyPlayback.selectedVisit??visit,key=recordedCameraKey(index);if(pair.length&&key!==cameraVisitKey&&compare!=='blink'&&state.mode!=='pilot')focusRecordedVisit(index,true);advanceCameraTween(dt);updateObservationScene(elapsed,earth,comparisonOpen);updateLiveOrbit(earth,!comparisonOpen&&view==='system');c.missionMeshes.spherex.labelDiv.style.display='none';if(!orbitContext)for(const [id,entry] of Object.entries(bodyMeshes))if(id!=='earth')entry.labelDiv.style.display='none';document.dispatchEvent(new Event('omni-comparison-frame'));}
+  if(document.body.classList.contains('unified-mission')){const W=innerWidth,H=innerHeight,comparisonOpen=!document.querySelector('.mission-comparison')?.classList.contains('is-collapsed'),framing=Math.min(1,Math.max(0,(sceneDistance-8.5)/55)),sceneOffset=W>800?(comparisonOpen?W*.29:-160*(1-framing)-W*.12*framing):0,frame=`${W}:${H}:${comparisonOpen}:${Math.round(sceneOffset)}`;if(state.mode==='pilot'){camera.clearViewOffset();camera.userData.missionSize=null;}else if(camera.userData.missionSize!==frame){camera.setViewOffset(W,H,sceneOffset,W>800?0:H*.14,W,H);camera.userData.missionSize=frame;}if(c.missionMeshes.spherex.orbitLine)c.missionMeshes.spherex.orbitLine.visible=false;advanceCameraTween(dt);updateObservationScene(elapsed,earth,comparisonOpen);updateLiveOrbit(earth,!comparisonOpen&&view==='system');c.missionMeshes.spherex.labelDiv.style.display='none';if(!orbitContext)for(const [id,entry] of Object.entries(bodyMeshes))if(id!=='earth')entry.labelDiv.style.display='none';document.dispatchEvent(new Event('omni-comparison-frame'));}
   if(view==='system'){if(!missionView){const direction=new T.Vector3(...equatorialToScene(field.ra,field.dec,R)).add(earth),corners=[[0,0],[N-1,0],[N-1,N-1],[0,N-1]].map(p=>new T.Vector3(...equatorialToScene(...outputToWorld(...p,N,field.ra,field.dec,FOV*8),R)).add(earth));const points=[];for(let i=0;i<4;i++){points.push(earth.clone(),corners[i]);points.push(corners[i],corners[(i+1)%4]);}points.forEach((p,i)=>cone.geometry.attributes.position.setXYZ(i,p.x,p.y,p.z));cone.geometry.attributes.position.needsUpdate=true;projectLabel('observationLabel',direction,`SPHEREX / D${detector} FIELD ↗`);}cone.visible=!missionView&&$('showFootprints').checked;$('spacecraftLabel').style.display='none';}
   else {cone.visible=false;$('observationLabel').style.display='none';$('spacecraftLabel').style.display='none';}
   if(compare==='blink'&&samples.length===2&&!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&elapsed-blinkTime>1.1){blinkTime=elapsed;visit=1-visit;updateVisit();}
@@ -179,7 +179,45 @@ export function installSurvey(c){
  scene.add(new T.HemisphereLight(0xc6d9e9,0x142532,1.0));
  const observingOverlay=installObservationOverlay({ui,c,focusSpacecraft:focusMission,cancelCameraMotion:()=>{cameraTween=null;},rotateMission,earthRadius:bodyMeshes.earth.body.displayRadius});
  function geocentricToScene(v){const rad=23.439291111*Math.PI/180,ey=v[1]*Math.cos(rad)+v[2]*Math.sin(rad),ez=-v[1]*Math.sin(rad)+v[2]*Math.cos(rad);return new T.Vector3(v[0],ez,-ey).multiplyScalar(bodyMeshes.earth.body.displayRadius/6371);}
- function updateObservationScene(elapsed,earth,cardOpen){const index=storyPlayback.selectedVisit??visit,record=recordedPosition(index),progress=storyPlayback.playing?storyPlayback.progress:.5,dir=new T.Vector3(...equatorialToScene(field.ra,field.dec,1)).normalize();if(record){const km=record.start.map((v,i)=>v+(record.end[i]-v)*progress);spacecraft.group.position.copy(earth).add(geocentricToScene(km));telescope.position.copy(spacecraft.group.position).sub(earth).normalize().multiplyScalar(.10);}const pixel=scanSample(progress,index),trails=[0,1].map(i=>{const r=recordedPosition(i);return r?[earth.clone().add(geocentricToScene(r.start)),earth.clone().add(geocentricToScene(r.end))]:null});telescope.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dir);observingOverlay.update({craft:spacecraft.group.position,earth,direction:dir,record,index,progress,wavelength:pixel?.wavelength,playing:storyPlayback.playing,date:images[index]?.h['DATE-AVG']||pair[index]&&date(pair[index]),field,elapsed,cardOpen,trails});}
+ let craftKey='',craftOffset=null,craftTransition=null;
+ const reducedCraftMotion=matchMedia('(prefers-reduced-motion: reduce)');
+ function updateObservationScene(elapsed,earth,cardOpen){
+  const index=storyPlayback.selectedVisit??visit,record=recordedPosition(index);
+  const progress=storyPlayback.playing?storyPlayback.progress:.5;
+  const dir=new T.Vector3(...equatorialToScene(field.ra,field.dec,1)).normalize();
+  const key=recordedCameraKey(index);
+  spacecraft.group.visible=Boolean(record);
+  if(record){
+   const km=record.start.map((v,i)=>v+(record.end[i]-v)*progress);
+   const destination=geocentricToScene(km);
+   if(key!==craftKey){
+    craftTransition=null;
+    if(craftOffset&&!reducedCraftMotion.matches){
+     const from=craftOffset.clone().normalize(),to=destination.clone().normalize();
+     craftTransition={from,radius:craftOffset.length(),rotation:new T.Quaternion().setFromUnitVectors(from,to),start:elapsed};
+    }
+    craftKey=key;
+   }
+   if(craftTransition){
+    const {from,radius,rotation,start}=craftTransition;
+    const t=Math.min(1,Math.max(0,(elapsed-start)/.85));
+    const eased=t*t*(3-2*t);
+    craftOffset=t===1?destination:from.clone().applyQuaternion(new T.Quaternion().slerp(rotation,eased)).multiplyScalar(T.MathUtils.lerp(radius,destination.length(),eased));
+    if(t===1)craftTransition=null;
+   }else craftOffset=destination;
+   spacecraft.group.position.copy(earth).add(craftOffset);
+   telescope.position.copy(craftOffset).normalize().multiplyScalar(.10);
+  }else{
+   craftKey='';craftOffset=null;craftTransition=null;
+  }
+  const pixel=scanSample(progress,index);
+  const trails=[0,1].map(i=>{
+   const r=recordedPosition(i);
+   return r?[earth.clone().add(geocentricToScene(r.start)),earth.clone().add(geocentricToScene(r.end))]:null;
+  });
+  telescope.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dir);
+  observingOverlay.update({craft:spacecraft.group.position,earth,direction:dir,record,index,progress,wavelength:craftTransition?undefined:pixel?.wavelength,playing:storyPlayback.playing,date:images[index]?.h['DATE-AVG']||pair[index]&&date(pair[index]),field,elapsed,cardOpen,trails});
+ }
  const telescope=new T.Group(),silver=new T.MeshStandardMaterial({color:0xd8e5e7,metalness:.48,roughness:.36}),gold=new T.MeshStandardMaterial({color:0xc8a761,metalness:.48,roughness:.43}),blue=new T.MeshStandardMaterial({color:0x1e6381,metalness:.22,roughness:.38});
  const shell=new T.Mesh(new T.CylinderGeometry(.09,.175,.35,32),silver);telescope.add(shell);
  const collar=new T.Mesh(new T.CylinderGeometry(.18,.21,.065,32),gold);collar.position.y=-.16;telescope.add(collar);
