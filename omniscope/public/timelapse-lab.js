@@ -21,7 +21,7 @@ root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
 <ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Apply coordinates”.</span></div></div>
 <div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" aria-label="Observation timeline" type="range" min="0" max="0" value="0"><select id="tlFps" aria-label="Playback speed"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
-<p id="tlReleaseNote" class="tl-info" hidden>DR1 announced November 12, 2026. The timeline shows when each image was taken.</p><div class="tl-row tl-dates"><button id="tlPrev" aria-label="Previous observation" disabled>‹</button><select id="tlDates" aria-label="Date taken (UTC)" disabled><option>Date taken (UTC)</option></select><button id="tlNext" aria-label="Next observation" disabled>›</button></div><div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
+<p id="tlReleaseNote" class="tl-info" hidden>DR1 announced November 12, 2026. The timeline shows when each image was taken.</p><div class="tl-row tl-dates"><button id="tlPrev" aria-label="Previous observation" disabled>‹</button><select id="tlDates" aria-label="Date taken (UTC)" disabled><option>Date taken (UTC)</option></select><button id="tlNext" aria-label="Next observation" disabled>›</button></div><div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><button id="tlRetry" type="button" hidden>Retry live archive</button><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
 <form id="tlCoordinates" aria-labelledby="tlCoordinatesTitle"><h3 id="tlCoordinatesTitle">Custom coordinates</h3><div class="tl-row"><label for="tlRa">Right ascension (°)<input id="tlRa" type="number" inputmode="decimal" step="any" min="0" required placeholder="133.7951"></label><label for="tlDec">Declination (°)<input id="tlDec" type="number" inputmode="decimal" step="any" min="-90" max="90" required placeholder="-7.2451"></label></div><button id="tlLoad" class="tl-main" type="submit">Apply coordinates</button></form>
@@ -60,15 +60,22 @@ function requestSignal(timeout,signal){
  return signal?AbortSignal.any([deadline,signal]):deadline;
 }
 async function api(path,asJson=1,timeout=70000,signal){const r=await fetch(API+path,{signal:requestSignal(timeout,signal)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
-async function sia(ra,dec,detector,signal){
+async function sia(ra,dec,detector,signal,dr1Only){
+ let available=0;
  const out=new Map();
  async function query(collections){
   await Promise.all(collections.map(async collection=>{
    try{
     const url=API+'/archive?'+new URLSearchParams({ra,dec,collection});
-    const response=await fetch(url,{signal:requestSignal(12000,signal)});
-    if(!response.ok)return;
+    let response;
+    for(let attempt=0;attempt<2&&!signal.aborted;attempt++){
+     try{response=await fetch(url,{signal:requestSignal(8500,signal)});}catch{}
+     if(response?.ok||(response&&response.status<500&&response.status!==429))break;
+    }
+    if(!response?.ok)return;
     const doc=new DOMParser().parseFromString(await response.text(),'application/xml');
+    if(!doc.getElementsByTagName('VOTABLE').length||[...doc.getElementsByTagName('INFO')].some(info=>info.getAttribute('name')==='QUERY_STATUS'&&info.getAttribute('value')==='ERROR'))return;
+    available++;
     const fields=[...doc.getElementsByTagName('FIELD')].map(field=>field.getAttribute('name'));
     for(const tr of doc.getElementsByTagName('TR')){
      const row=Object.fromEntries([...tr.getElementsByTagName('TD')].map((td,i)=>[fields[i],td.textContent]));
@@ -77,15 +84,20 @@ async function sia(ra,dec,detector,signal){
    }catch{}
   }));
  }
- await query(COLLECTIONS.filter(collection=>!collection.endsWith('_deep')));
- if(!signal.aborted&&out.size<2)await query(COLLECTIONS.filter(collection=>collection.endsWith('_deep')));
+ const collections=dr1Only?COLLECTIONS.filter(collection=>collection.startsWith('spherex_dr1')):COLLECTIONS;
+ await query(collections.filter(collection=>!collection.endsWith('_deep')));
+ if(!signal.aborted&&out.size<2)await query(collections.filter(collection=>collection.endsWith('_deep')));
+ if(!available&&!signal.aborted)throw Error('NASA/IPAC archive search is temporarily unavailable.');
  return [...out.values()].sort((a,b)=>a.t_min-b.t_min);
 }
-async function loadAll(showLatest=false,keepPreview=false){
+async function loadAll(showLatest=false,keepPreview=false,dr1Only=false){
  const ra=$('#tlRa').valueAsNumber,dec=$('#tlDec').valueAsNumber,fov=+$('#tlFov').value;
  if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||Math.abs(dec)>90)return set('Enter RA 0–360° and Dec −90…90°.',1);
- const signal=startLoad();datePicked=false;stop();if(!keepPreview){frames=[];groups=[];$('#tlReleaseNote').hidden=true;}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
- try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d,signal);
+ const signal=startLoad();
+ $('#tlRetry').hidden=true;
+ $('#tlRetry').onclick=()=>loadAll(showLatest,keepPreview,dr1Only);
+ datePicked=false;stop();if(!keepPreview){frames=[];groups=[];$('#tlReleaseNote').hidden=true;}cache.clear();cats={};pin=null;movers=[];renderMovers();$('#tlEmpty').hidden=keepPreview;if(!keepPreview)syncDates();overlay();spectrum();field={ra,dec,fov};hdr={CRVAL1:ra,CRVAL2:dec,CRPIX1:(N+1)/2,CRPIX2:(N+1)/2,CDELT1:-fov/(N-1),CDELT2:-fov/(N-1)};
+ try{set(keepPreview?'DR1 preview · looking for more dates…':'Searching the SPHEREx archive…');const d=bandSel()?.d || +$('#tlDet').value;let rows=await sia(ra,dec,d,signal,dr1Only);
   if(signal.aborted)return;
   if(keepPreview)rows=rows.filter(row=>!frames.some(frame=>frame.url===row.access_url));
   if(!rows.length)throw Error('No SPHEREx observations here for this selection. Try another detector or direction.');
@@ -114,8 +126,8 @@ async function loadAll(showLatest=false,keepPreview=false){
    $('#tlBusy').textContent=groups.length>=2?`Ready to play · loading more (${done}/${rows.length})`:`Loading exposures ${done}/${rows.length}`}}));
   if(signal.aborted)return;
   $('#tlBusy').hidden=true;if(!frames.length)throw Error('Could not read any cutouts. Retry in a moment.');
-  publish();if(keepPreview&&frames.length===initialFrames)set('Bundled observations shown. No additional archive images could be read.',1);fetchCats(signal);if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
- catch(e){if(signal.aborted)return;set(keepPreview?'Bundled observations shown. The live archive could not add more dates.':e.message,1);$('#tlBusy').hidden=true}finally{if(!signal.aborted)busy=0}}
+  publish();if(keepPreview&&frames.length===initialFrames){set('Saved observations shown. Additional archive images could not be loaded.',1);$('#tlRetry').hidden=false;}fetchCats(signal);if(!groups.length)set('No usable pixels for this wavelength. Try a wider range.',1)}
+ catch(e){if(signal.aborted)return;set(keepPreview?'Saved observations shown. '+e.message:e.message,1);$('#tlRetry').hidden=false;$('#tlBusy').hidden=true}finally{if(!signal.aborted)busy=0}}
 async function fetchCats(signal){const r=field.fov*.75;for(const s of ['gaia','wise'])api(`/catalog?src=${s}&ra=${field.ra}&dec=${field.dec}&r=${r}`,1,15000,signal).then(d=>{if(!signal.aborted){cats[s]=d.rows;overlay();}}).catch(()=>{});}
 const bandSel=()=>{const v=$('#tlBand').value;if(!v)return null;const [d,c]=v.split('-').map(Number);return BANDS.find(b=>b.d===d&&b.c===c)};
 function zImage(f){ // robust-normalised image (σ units) after flag and band masks
@@ -212,8 +224,8 @@ function openPreset(index,showLatest=false){const p=PRESETS[index];let {ra,dec}=
  target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
  $('#tlName').value=p.n;$('#tlRa').setCustomValidity('');$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
-root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>b.dataset.p==='0'?openReleasePreview():openPreset(Number(b.dataset.p)));
-export async function openReleasePreview(){
+root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>b.dataset.p==='0'?openReleasePreview(false):openPreset(Number(b.dataset.p)));
+export async function openReleasePreview(dr1Only=true){
  if(!root.open)root.showModal();
  const signal=startLoad();stop();
  $('#tlLoad').disabled=true;
@@ -225,7 +237,7 @@ export async function openReleasePreview(){
    {file:'barnard-dr1.fits',detector:3,path:'dr1/level2/2026W19_1A/l2b-v27-2026-245/3/level2_2026W19_1A_0403_1D3_spx_l2b-v27-2026-245.fits'},
    {file:'barnard-qr3.fits',detector:1,path:'qr3/level2/2026W36_1A/l2b-v27-2026-252/1/level2_2026W36_1A_0510_1D1_spx_l2b-v27-2026-252.fits'}
   ];
-  const results=await Promise.allSettled(files.map(async ({file,detector,path})=>{
+  const results=await Promise.allSettled(files.filter(file=>!dr1Only||file.detector===3).map(async ({file,detector,path})=>{
    const response=await fetch(new URL('./data/'+file,import.meta.url),{signal});
    if(!response.ok)throw Error('Preview image unavailable.');
    const image=parseFits(await response.arrayBuffer());
@@ -242,7 +254,7 @@ export async function openReleasePreview(){
   target=PRESETS[0];
   $('#tlReleaseNote').hidden=false;
 
-  void loadAll(true,true);
+  void loadAll(true,true,dr1Only);
  }catch(error){if(signal.aborted)return;set(error.message,1);}
  finally{if(!signal.aborted){busy=0;$('#tlLoad').disabled=false;}}
 
