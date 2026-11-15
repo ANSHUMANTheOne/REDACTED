@@ -19,13 +19,13 @@ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('
 const btn=Object.assign(document.createElement('button'),{id:'tlOpen',textContent:'▶ Time-lapse lab',title:'SPHEREx multi-epoch movie, stacking and spectra'});
 root=Object.assign(document.createElement('dialog'),{id:'tlLab'});
 root.innerHTML=`<div class="tl-head"><div><span class="tl-o">OMNISCOPE / SPHEREx TIME-LAPSE</span><h2>Watch the sky change.</h2></div><button class="tl-x" aria-label="Close">×</button></div>
-<ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Open sky field”.</span></div></div>
+<ol class="tl-steps"><li>Choose a target or enter coordinates</li><li>Press ▶ to watch it change</li><li>Click a star to see its spectrum</li></ol><div class="tl-grid"><div class="tl-view"><div class="tl-stage"><canvas id="tlImg" width="${N}" height="${N}"></canvas><canvas id="tlOv" width="${N*2}" height="${N*2}"></canvas><div id="tlBusy" hidden></div><div id="tlEmpty"><b>Nothing loaded yet</b><span>Choose a target like Barnard's Star, or enter coordinates and press “Apply coordinates”.</span></div></div>
 <div class="tl-play"><button id="tlPlay" aria-label="Play or pause time-lapse">▶</button><input id="tlSlide" aria-label="Observation timeline" type="range" min="0" max="0" value="0"><select id="tlFps" aria-label="Playback speed"><option value="1">1 fps</option><option value="3" selected>3 fps</option><option value="8">8 fps</option></select></div>
 <p id="tlReleaseNote" class="tl-info" hidden>DR1 announced November 12, 2026. The timeline shows when each image was taken.</p><div class="tl-row tl-dates"><button id="tlPrev" aria-label="Previous observation" disabled>‹</button><select id="tlDates" aria-label="Date taken (UTC)" disabled><option>Date taken (UTC)</option></select><button id="tlNext" aria-label="Next observation" disabled>›</button></div><div id="tlInfo" class="tl-info" role="status">Pick a target to begin.</div><details class="tl-frame-details"><summary>Observation details</summary><p id="tlFrameSource">Open a field to see its source.</p></details><canvas id="tlSpec" width="520" height="150"></canvas><div id="tlPix" class="tl-info">Click the image to pin a source and see its spectrum.</div></div>
 <div class="tl-ctl"><label>Choose a target</label><div class="tl-chips">${PRESETS.map((p,i)=>`<button data-p="${i}">${p.n}</button>`).join('')}</div>
 <div class="tl-row"><input id="tlName" placeholder="Name (SIMBAD)"><button id="tlRes">Find</button></div>
-<div class="tl-row"><input id="tlRa" type="number" step="any" placeholder="RA °"><input id="tlDec" type="number" step="any" placeholder="Dec °"></div>
-<label>Spectral band: all 102 channels (click one)</label><div class="tl-map"><button class="tl-all on" data-b="">All wavelengths</button>${DET.map((_,d)=>`<div class="tl-mrow"><span style="color:${COL[d]}">D${d+1}</span>${BANDS.filter(b=>b.d==d+1).map(b=>`<button data-b="${b.d}-${b.c}" style="--c:${COL[d]}" title="Band ${d*17+b.c} of 102 · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm"></button>`).join('')}</div>`).join('')}</div><div id="tlBandLabel" class="tl-info">All wavelengths (broadband)</div><select id="tlBand" hidden><option value="">All wavelengths</option>${DET.map((_,d)=>`<optgroup label="Detector ${d+1}">${BANDS.filter(b=>b.d==d+1).map(b=>`<option value="${b.d}-${b.c}">D${b.d} ch${b.c} · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm</option>`).join('')}</optgroup>`).join('')}</select><label>Field of view (bigger = follows faster movers)</label><select id="tlFov"><option value=".05">0.05° (3′)</option><option value=".1">0.1°</option><option value=".2" selected>0.2°</option><option value=".4">0.4°</option><option value=".7">0.7° (fast movers)</option></select><button id="tlLoad" class="tl-main">Open sky field</button><label>② How to show them</label><select id="tlMode"><option value="movie">Time-lapse</option><option value="trail">Trail (new on top of old)</option><option value="sum">Running sum</option><option value="first">Subtract: first epoch</option><option value="prev">Subtract: previous epoch</option></select>
+<form id="tlCoordinates" aria-label="Custom sky coordinates"><div class="tl-row"><label for="tlRa">Right ascension (°)<input id="tlRa" type="number" inputmode="decimal" step="any" min="0" required placeholder="133.7951"></label><label for="tlDec">Declination (°)<input id="tlDec" type="number" inputmode="decimal" step="any" min="-90" max="90" required placeholder="-7.2451"></label></div><button id="tlLoad" class="tl-main" type="submit">Apply coordinates</button></form>
+<label>Spectral band: all 102 channels (click one)</label><div class="tl-map"><button class="tl-all on" data-b="">All wavelengths</button>${DET.map((_,d)=>`<div class="tl-mrow"><span style="color:${COL[d]}">D${d+1}</span>${BANDS.filter(b=>b.d==d+1).map(b=>`<button data-b="${b.d}-${b.c}" style="--c:${COL[d]}" title="Band ${d*17+b.c} of 102 · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm"></button>`).join('')}</div>`).join('')}</div><div id="tlBandLabel" class="tl-info">All wavelengths (broadband)</div><select id="tlBand" hidden><option value="">All wavelengths</option>${DET.map((_,d)=>`<optgroup label="Detector ${d+1}">${BANDS.filter(b=>b.d==d+1).map(b=>`<option value="${b.d}-${b.c}">D${b.d} ch${b.c} · ${b.lo.toFixed(2)}–${b.hi.toFixed(2)} μm</option>`).join('')}</optgroup>`).join('')}</select><label>Field of view (bigger = follows faster movers)</label><select id="tlFov"><option value=".05">0.05° (3′)</option><option value=".1">0.1°</option><option value=".2" selected>0.2°</option><option value=".4">0.4°</option><option value=".7">0.7° (fast movers)</option></select><label>② How to show them</label><select id="tlMode"><option value="movie">Time-lapse</option><option value="trail">Trail (new on top of old)</option><option value="sum">Running sum</option><option value="first">Subtract: first epoch</option><option value="prev">Subtract: previous epoch</option></select>
 <details class="tl-adv"><summary>More options: detector, stacking</summary><label>Detector</label><select id="tlDet"><option value="0">All six (1–5 μm)</option>${DET.map((r,i)=>`<option value="${i+1}"${i==2?' selected':''}>D${i+1} · ${r[0]}–${r[1]} μm</option>`).join('')}</select>
 
 <label>Stack frames</label><select id="tlBin"><option value="0">Each exposure</option><option value="7">Add: 7-day bins</option><option value="30">Add: 30-day bins</option><option value="-1">Add: one per detector</option></select></details>
@@ -38,7 +38,7 @@ if (!actions) document.body.append(btn);
 document.body.append(root);
 root.addEventListener('close',stop);
 root.querySelector('.tl-grid').prepend(root.querySelector('.tl-ctl'));
-root.querySelector('.tl-row:has(#tlDec)').after(root.querySelector('#tlLoad'));
+
 const set=(t,e)=>{const i=$('#tlInfo');i.textContent=t;i.classList.toggle('err',!!e)};
 btn.onclick=()=>root.showModal();$('.tl-x').onclick=()=>root.close();
 async function api(path,asJson=1,timeout=70000){const r=await fetch(API+path,{signal:AbortSignal.timeout(timeout)});if(!r.ok){let m='Service error '+r.status;try{m=(await r.json()).error||m}catch{}throw Error(m)}return asJson?r.json():r.arrayBuffer()}
@@ -169,13 +169,25 @@ function stop(){clearInterval(timer);timer=null;$('#tlPlay').textContent='▶'}
 $('#tlPlay').onclick=()=>{if(timer)return stop();if(groups.length<2)return;$('#tlPlay').textContent='❚❚';timer=setInterval(()=>{k=(k+1)%groups.length;draw()},1000/+$('#tlFps').value)};
 $('#tlFps').onchange=()=>{if(timer){stop();$('#tlPlay').click()}};$('#tlSlide').oninput=e=>seek(+e.target.value);
 for(const id of ['#tlMode','#tlBin','#tlBand','#tlFlag'])$(id).onchange=()=>{build()};for(const id of ['#tlGaia','#tlWise'])$(id).onchange=overlay;
-$('#tlLoad').onclick=()=>{target=null;loadAll()};
+$('#tlCoordinates').onsubmit=event=>{
+ event.preventDefault();
+ if(busy)return;
+ if($('#tlRa').valueAsNumber>=360){
+  $('#tlRa').setCustomValidity('Enter a right ascension below 360 degrees.');
+  $('#tlRa').reportValidity();
+  return;
+ }
+ target=null;
+ $('#tlName').value='';
+ loadAll();
+};
+$('#tlRa').addEventListener('input',()=>$('#tlRa').setCustomValidity(''));
 async function resolve(name){const d=await api('/catalog?name='+encodeURIComponent(name));return d}
-$('#tlRes').onclick=async()=>{try{const d=await resolve($('#tlName').value);$('#tlRa').value=d.ra.toFixed(6);$('#tlDec').value=d.dec.toFixed(6);target=null;set('Resolved '+$('#tlName').value)}catch(e){set(e.message,1)}};
+$('#tlRes').onclick=async()=>{try{const d=await resolve($('#tlName').value);$('#tlRa').setCustomValidity('');$('#tlRa').value=d.ra.toFixed(6);$('#tlDec').value=d.dec.toFixed(6);target=null;set('Resolved '+$('#tlName').value)}catch(e){set(e.message,1)}};
 async function openPreset(index,showLatest=false){if(busy)return;const p=PRESETS[index];let {ra,dec}=p;if(p.q)try{({ra,dec}=await resolve(p.q))}catch{}
  target={...p,ra,dec};const dy=p.pm?2025.9-p.ep:0; // centre on the expected position in late 2025
  if(p.pm){dec+=p.pm[1]*dy/3.6e6;ra+=p.pm[0]*dy/3.6e6/Math.cos(dec*Math.PI/180)}
- $('#tlName').value=p.n;$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
+ $('#tlName').value=p.n;$('#tlRa').setCustomValidity('');$('#tlRa').value=ra.toFixed(6);$('#tlDec').value=dec.toFixed(6);$('#tlFov').value=p.pm&&Math.hypot(...p.pm)>5000?'.4':'.2';return loadAll(showLatest);}
 root.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPreset(Number(b.dataset.p)));
 export async function openReleasePreview(){
  if(!root.open)root.showModal();

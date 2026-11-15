@@ -43,3 +43,6 @@
  #tlLab .tl-map button{min-height:28px}
  #tlLab .tl-frame-details summary{padding:10px 0}
 }
+
+#tlCoordinates .tl-row label{flex:1;min-width:0}
+#tlCoordinates label input{display:block;margin-top:5px;box-sizing:border-box}
